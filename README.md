@@ -10,5 +10,5 @@ TODO:
 
 4. if enough stuff in memory:
 
-4.1. calc estimated return
-4.2. accumulate gradients over all oberservations
+  1. calc estimated return
+  2. accumulate gradients over all oberservations
