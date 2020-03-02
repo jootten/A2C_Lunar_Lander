@@ -10,5 +10,5 @@ run env for one episode, store everything in memory
 
 if enough stuff in memory:
 
-  calc estimated return
-  accumulate gradients over all oberservations
+1. calc estimated return
+2. accumulate gradients over all oberservations
