@@ -2,13 +2,13 @@
 
 TODO:
 
-openAI env aufsetzen
+1. openAI env aufsetzen
 
-2 Networks (policy und state-value)
+2. 2 Networks (policy und state-value)
 
-run env for one episode, store everything in memory
+3. run env for one episode, store everything in memory
 
-if enough stuff in memory:
+4. if enough stuff in memory:
 
-1. calc estimated return
-2. accumulate gradients over all oberservations
+4.1. calc estimated return
+4.2. accumulate gradients over all oberservations
