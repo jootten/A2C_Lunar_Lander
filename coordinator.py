@@ -1,5 +1,6 @@
 from agent import A2CAgent
 from actor import Actor
+from agent import Memory
 from critic import Critic
 import tensorflow as tf
 import os
@@ -11,8 +12,9 @@ os.system("rm -rf ./logs/")
 #!rm -rf ./logs/
 
 class Coordinator:
-    def __init__(self, num_agents=2, num_episodes=100):
+    def __init__(self, num_agents=4, num_updates=10000):
         self.num_agents = num_agents
+        self.num_steps = 5
         self.agent_list = []
         
         # Initialize model, loss and optimizer
@@ -32,18 +34,18 @@ class Coordinator:
         self.train_summary_writer = tf.summary.create_file_writer(train_log_dir)
 
 
-    def run_for_episodes(self, num_episodes=100):
+    def run_for_episodes(self, num_updates=10000):
         # called from main
         
-        for i_episode in range(num_episodes):
+        for i_update in range(num_updates):
             # gradient lists to collect gradients from all agents
             policy_gradient_list = []
             critic_gradient_list = []
             for agent in self.agent_list:
-                policy_gradient, critic_gradient = agent.run(self.actor, self.critic)
+                policy_gradient, critic_gradient = agent.run(self.actor, self.critic, self.num_steps)
                 policy_gradient_list.append(policy_gradient)
                 critic_gradient_list.append(critic_gradient)
-                print(f"Episode {i_episode + 1} of {num_episodes} finished")
+                print(f"Episode {i_update + 1} of {num_updates} finished")
                 
             # calculate mean gradient over all agents and apply gradients to update models.
             mean_policy_gradients = np.mean(policy_gradient_list, axis=0)
@@ -51,10 +53,13 @@ class Coordinator:
             self.actor_optimizer.apply_gradients(zip(mean_policy_gradients, self.actor.trainable_variables))
             self.critic_optimizer.apply_gradients(zip(mean_critic_gradients, self.critic.trainable_variables))
             # Render environment and store summary statistics
-            self.test()
+            if i_update % 20 == 0:
+                self.test()
 
     def test(self):
-        accum_reward, step = self.agent_list[0].run(self.actor, self.critic, test=True)
+        self.agent_list[0].run(self.actor, self.critic, test=True, num_steps=200)
+        accum_reward = self.agent_list[0].memory.rewards.sum()
+        step = self.agent_list[0].step
         # Store summary statistics
         with self.train_summary_writer.as_default():
             #tf.summary.scalar('policy loss', tf.reduce_mean(actor_losses), step=step)
