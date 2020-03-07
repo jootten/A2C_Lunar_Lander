@@ -4,13 +4,14 @@ from critic import Critic
 import tensorflow as tf
 import os
 from datetime import datetime
+import numpy as np
 
 os.system("rm -rf ./logs/")
 
 #!rm -rf ./logs/
 
 class Coordinator:
-    def __init__(self, num_agents=1, num_episodes=100):
+    def __init__(self, num_agents=2, num_episodes=100):
         self.num_agents = num_agents
         self.agent_list = []
         
@@ -21,7 +22,7 @@ class Coordinator:
         self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate=0.1)
         
         # create multiple agents
-        for i_agent in range(num_agents):
+        for _ in range(num_agents):
             self.agent_list.append(A2CAgent())
 
         # Prepare Tensorboard
@@ -39,32 +40,36 @@ class Coordinator:
             policy_gradient_list = []
             critic_gradient_list = []
             for agent in self.agent_list:
-                policy_gradient, critc_gradient = agent.run(self.actor, self.critic)
+                policy_gradient, critic_gradient = agent.run(self.actor, self.critic)
                 policy_gradient_list.append(policy_gradient)
-                critic_gradient_list.append(critc_gradient)
+                critic_gradient_list.append(critic_gradient)
                 print(f"Episode {i_episode + 1} of {num_episodes} finished")
                 
-        # calculate mean gradient over all agents and apply gradients to update models.
-        mean_policy_gradients = tf.math.reduce_mean(policy_gradient_list)
-        mean_critic_gradients = tf.math.reduce_mean(critic_gradient_list)
-        actor_optimizer.apply_gradients(zip(mean_policy_gradients, actor.trainable_variables))
-        critic_optimizer.apply_gradients(zip(mean_critic_gradients, critic.trainable_variables))
+            # calculate mean gradient over all agents and apply gradients to update models.
+            mean_policy_gradients = np.mean(policy_gradient_list, axis=0)
+            mean_critic_gradients = np.mean(critic_gradient_list, axis=0)
+            self.actor_optimizer.apply_gradients(zip(mean_policy_gradients, self.actor.trainable_variables))
+            self.critic_optimizer.apply_gradients(zip(mean_critic_gradients, self.critic.trainable_variables))
+            # Render environment and store summary statistics
+            self.test()
 
+    def test(self):
+        accum_reward, step = self.agent_list[0].run(self.actor, self.critic, test=True)
         # Store summary statistics
         with self.train_summary_writer.as_default():
-            tf.summary.scalar('policy loss', tf.reduce_mean(actor_losses), step=step)
+            #tf.summary.scalar('policy loss', tf.reduce_mean(actor_losses), step=step)
             
             # Store summary statistics
-            tf.summary.scalar('critic loss', tf.reduce_mean(critic_losses), step=step)
+            #tf.summary.scalar('critic loss', tf.reduce_mean(critic_losses), step=step)
             
             # Critic
-            #tf.summary.scalar('V(s)', state_v[0,0], step=step)
+            tf.summary.scalar('accumulative reward', accum_reward, step=step)
             
             # Actor
-            tf.summary.scalar('mu0', mu[0,0], step=step)
-            tf.summary.scalar('sigma0', sigma[0,0], step=step)
-            tf.summary.scalar('mu1', mu[0,1], step=step)
-            tf.summary.scalar('sigma1', sigma[0,1], step=step)
+            #tf.summary.scalar('mu0', mu[0,0], step=step)
+            #tf.summary.scalar('sigma0', sigma[0,0], step=step)
+            #tf.summary.scalar('mu1', mu[0,1], step=step)
+            #tf.summary.scalar('sigma1', sigma[0,1], step=step)
             
             # Accumulative reward
-            tf.summary.scalar("accumulative reward", accum_reward, step=step)
+            #tf.summary.scalar("accumulative reward", accum_reward, step=step)
