@@ -15,43 +15,16 @@ class A2CAgent:
         self.gamma = 0.95 # discount factor
         self.num_steps = 5
         self.memory = Memory(self.num_steps)
-        self.mse = tf.keras.losses.MSE
         self.step = 0
         self.chief = chief
         self.actor = Actor()
         self.critic = Critic()
-        self.estimated_return = np.zeros(shape=(self.num_steps, 1))
         self.finished = True
         self.state = None
 
     def get_action_distribution(self, state):
         mu, sigma = self.actor(state)
         return Normal(loc=mu, scale=sigma)
-
-
-    def _actor_loss(self):
-        # Compute state value
-        state_v = self.critic(self.memory.states)
-        # Get advantage estimate
-        advantages = self.estimated_return - state_v
-        advantages = tf.cast(advantages, tf.float32)
-        # Get log probability of the taken action
-        logprob = self.get_action_distribution(self.memory.states).log_prob(self.memory.actions)
-        # Advantage as baseline
-        return -logprob * advantages
-
-    def _compute_gradients(self, type):
-        with tf.GradientTape() as tape:
-            if type == 'actor':
-                # Compute the actor loss
-                loss = self._actor_loss()
-            else:
-                # Compute the statue value
-                state_v = self.critic(self.memory.states)
-                # Compute the critic loss
-                loss = self.mse(self.estimated_return, state_v)
-            # Compute the gradients
-            return tape.gradient(loss, self.actor.trainable_variables if type == 'actor' else self.critic.trainable_variables)
         
     def run(self, actor, critic, num_steps, test=False):
         self.actor = actor
@@ -79,21 +52,5 @@ class A2CAgent:
                 self.state = self.env.reset()
             # Compute gradients in training
             if not test and t == self.num_steps - 1:
-                return self._get_mean_gradients()
+                return self.memory
             self.step += 1
-    
-    def _get_mean_gradients(self):
-        # Lists to store gradients 
-        policy_gradient_list = []
-        critic_gradient_list = []
-        # Iterate over taken actions and observed states and rewards
-        # Compute estimated return
-        self.estimated_return = self.gamma * self.estimated_return + self.memory.rewards
-        # Compute gradients for the actor (policy gradient), Maximize the estimated return
-        policy_gradient_list.append(self._compute_gradients('actor'))
-        # Compute gradients for the critic, minimize MSE for the state value function
-        critic_gradient_list.append(self._compute_gradients('critic'))
-        # Compute mean gradients
-        policy_gradients = np.mean(policy_gradient_list, axis=0)
-        critic_gradients = np.mean(critic_gradient_list, axis=0)
-        return policy_gradients, critic_gradients
