@@ -5,8 +5,9 @@ from critic import Critic
 import gym
 import numpy as np
 import ray
+from memory import Memory
 
-
+@ray.remote
 class A2CAgent:
     def __init__(self, chief=False):
         self.env = gym.make('LunarLanderContinuous-v2')
@@ -96,17 +97,3 @@ class A2CAgent:
         policy_gradients = np.mean(policy_gradient_list, axis=0)
         critic_gradients = np.mean(critic_gradient_list, axis=0)
         return policy_gradients, critic_gradients
-
-
-class Memory:
-    def __init__(self, num_steps):
-        self.states = np.empty(shape=(num_steps, 8))
-        self.actions = np.empty(shape=(num_steps, 2))
-        self.rewards = np.zeros(shape=(num_steps, 1))
-        self.terminals = []
-    
-    def store(self, state, action, reward, done, t):
-        self.states[t] = state
-        self.actions[t] = action
-        self.rewards[t] = reward
-        self.terminals.append(done)

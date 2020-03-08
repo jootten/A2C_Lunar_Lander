@@ -6,13 +6,14 @@ import tensorflow as tf
 import os
 from datetime import datetime
 import numpy as np
+import ray
 
 os.system("rm -rf ./logs/")
 
 #!rm -rf ./logs/
 
 class Coordinator:
-    def __init__(self, num_agents=4, num_updates=10000):
+    def __init__(self, num_agents=4):
         self.num_agents = num_agents
         self.num_steps = 5
         self.agent_list = []
@@ -24,8 +25,8 @@ class Coordinator:
         self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate=0.1)
         
         # create multiple agents
-        for _ in range(num_agents):
-            self.agent_list.append(A2CAgent())
+#        for _ in range(num_agents):
+        self.agent_list = [A2CAgent.remote() for _ in range(num_agents)]
 
         # Prepare Tensorboard
         
@@ -39,13 +40,13 @@ class Coordinator:
         
         for i_update in range(num_updates):
             # gradient lists to collect gradients from all agents
-            policy_gradient_list = []
-            critic_gradient_list = []
-            for agent in self.agent_list:
-                policy_gradient, critic_gradient = agent.run(self.actor, self.critic, self.num_steps)
-                policy_gradient_list.append(policy_gradient)
-                critic_gradient_list.append(critic_gradient)
-                print(f"Episode {i_update + 1} of {num_updates} finished")
+#            policy_gradient_list = []
+#            critic_gradient_list = []
+            #for agent in self.agent_list:
+            policy_gradient_list, critic_gradient_list = ray.get([agent.run.remote(self.actor, self.critic, self.num_steps) for agent in self.agent_list])
+#                policy_gradient_list.append(policy_gradient)
+#                critic_gradient_list.append(critic_gradient)
+            print(f"Episode {i_update + 1} of {num_updates} finished")
                 
             # calculate mean gradient over all agents and apply gradients to update models.
             mean_policy_gradients = np.mean(policy_gradient_list, axis=0)

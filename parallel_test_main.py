@@ -26,11 +26,13 @@ def main():
     ray.init()
     
     # parallelize classes
-    a1 = Actor.remote()
-    a2 = Actor.remote()
+    agents = [Actor.remote() for _ in range(2)]
+    #a1 = Actor.remote()
+    #a2 = Actor.remote()
     
-    obs1_id = a1.run1ep.remote()
-    obs2_id = a2.run1ep.remote()
+    obs_ids = ray.get([agent.run1ep.remote() for agent in agents])
+    #obs1_id = a1.run1ep.remote()
+    #obs2_id = a2.run1ep.remote()
     
     # Get returned observations with ray.get(obs1_id)
     
