@@ -12,9 +12,9 @@ os.system("rm -rf ./logs/")
 #!rm -rf ./logs/
 
 class Coordinator:
-    def __init__(self, num_agents=4, num_updates=10000):
+    def __init__(self, num_agents=8, num_updates=10000):
         self.num_agents = num_agents
-        self.num_steps = 5
+        self.num_steps = 8
         self.agent_list = []
         
         # Initialize model, loss and optimizer
@@ -45,13 +45,15 @@ class Coordinator:
                 policy_gradient, critic_gradient = agent.run(self.actor, self.critic, self.num_steps)
                 policy_gradient_list.append(policy_gradient)
                 critic_gradient_list.append(critic_gradient)
-                print(f"Episode {i_update + 1} of {num_updates} finished")
+                
                 
             # calculate mean gradient over all agents and apply gradients to update models.
             mean_policy_gradients = np.mean(policy_gradient_list, axis=0)
             mean_critic_gradients = np.mean(critic_gradient_list, axis=0)
             self.actor_optimizer.apply_gradients(zip(mean_policy_gradients, self.actor.trainable_variables))
             self.critic_optimizer.apply_gradients(zip(mean_critic_gradients, self.critic.trainable_variables))
+            # 
+            print(f"Update {i_update + 1} of {num_updates} with {self.num_agents} agents finished.")
             # Render environment and store summary statistics
             if i_update % 20 == 0:
                 self.test()
@@ -71,8 +73,8 @@ class Coordinator:
             tf.summary.scalar('accumulative reward', accum_reward, step=step)
             
             # Actor
-            #tf.summary.scalar('mu0', mu[0,0], step=step)
-            #tf.summary.scalar('sigma0', sigma[0,0], step=step)
+            #tf.summary.scalar('mu0', dist.loc[0,0], step=step)
+            #tf.summary.scalar('sigma0', dist.scale[0,1], step=step)
             #tf.summary.scalar('mu1', mu[0,1], step=step)
             #tf.summary.scalar('sigma1', sigma[0,1], step=step)
             

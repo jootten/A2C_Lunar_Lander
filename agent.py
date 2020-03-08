@@ -12,7 +12,7 @@ class A2CAgent:
         self.env = gym.make('LunarLanderContinuous-v2')
         
         self.gamma = 0.95 # discount factor
-        self.num_steps = 5
+        self.num_steps = 8
         self.memory = Memory(self.num_steps)
         self.mse = tf.keras.losses.MSE
         self.step = 0
