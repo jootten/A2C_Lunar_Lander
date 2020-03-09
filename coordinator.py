@@ -14,7 +14,7 @@ os.system("rm -rf ./logs/")
 #!rm -rf ./logs/
 
 class Coordinator:
-    def __init__(self, num_agents=8):
+    def __init__(self, num_agents=4):
         self.num_agents = num_agents
         self.num_steps = 5
         self.agent_list = []
@@ -29,6 +29,8 @@ class Coordinator:
         self.gamma = 0.99
         self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate=0.1)
         self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate=0.1)
+        
+        self.entropy_coefficient = 0.01 # used to balance exploration
         
         # create multiple agents
 #        for _ in range(num_agents):
@@ -80,7 +82,17 @@ class Coordinator:
             
             # Accumulative reward
             #tf.summary.scalar("accumulative reward", accum_reward, step=step)
-
+    def _entropy(self):
+        # get standard deviation values
+        std = self.get_action_distribution(self.memory.states).scale
+        logstd = np.log(std)
+        
+        # use log std to calculate entropy
+        entropy = tf.reduce_sum(logstd + .5 * np.log(2.0 * np.pi * np.e), axis=-1)
+        # expand dimensions t
+        entropy = tf.expand_dims(entropy,1)
+        return tf.reduce_mean(entropy) #tf.zeros((1,20))
+        
     def _actor_loss(self):
         # Compute state value
         state_v = self.critic(self.memory.states)
@@ -95,8 +107,10 @@ class Coordinator:
     def _compute_gradients(self, type):
         with tf.GradientTape() as tape:
             if type == 'actor':
-                # Compute the actor loss
-                loss = self._actor_loss()
+                # Compute the actor loss: 
+                # total loss = policy gradient loss - entropy * entropy coefficient +  value loss * Value coefficient 
+                loss = self._actor_loss() - self._entropy() * self.entropy_coefficient #+ value_loss * value_coefficient ? 
+                #breakpoint()
             else:
                 # Compute the statue value
                 state_v = self.critic(self.memory.states)
