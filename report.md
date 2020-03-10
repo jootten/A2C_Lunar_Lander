@@ -1,10 +1,35 @@
 ## Project report
 
-#### topic:
+### General informations
 
-* A2C for continuous action spaces applied on the [LunarLanderContinuous][LLC] environment from OpenAI
+**For the course**:
 
-#### important parts we worked on:
+Implementing Artificial Neural Networks with Tensorflow (winter term 2019/20)
+
+**Topic**:
+
+A2C for continuous action spaces applied on the [LunarLanderContinuous][LLC] environment from Gym OpenAI
+
+**Participants**:
+
+Jonas Otten  
+Alexander Prochnow  
+Paul Jänsch
+
+### Introduction/Motivation
+
+...
+
+### Important background knowledge
+
+Sources used:
+* [the A3C paper][A3C]
+* [Lilian Weng's blogpost about Policy Gradient Algorithms][Lil'Log]
+* [A2C Code provided by OpenAI][A2Code]
+
+### Project development log
+
+Here we desribe how we approached the given problem, name the steps we have taken and lay out the motivation for the decisions we made in the process of this project. (Readers only interested in the final result with explanations to the important code segments can skip this part and can continue with the paragraph "The model and the experiment")
 
 **Phase 1** (implementing A2C for the discrete action space in the [CartPole][CP] environment:
 
@@ -32,11 +57,15 @@ Even with our simple network architecure we were able to observe a considerable 
  * we looked at different parallelization packages and after some testing we decided to go with [Ray][Ray]
  * Ray allowed us to run multiple agents on our CPUs/GPUs and with this significantly boosting our learning
  
+### The model and the experiment
+
+...
  
- 
-link tags:
+
 
 [LLC]: https://gym.openai.com/envs/LunarLanderContinuous-v2/
 [CP]: https://gym.openai.com/envs/CartPole-v1/
 [Ray]: https://ray.io/
-
+[Lil'Log]: https://lilianweng.github.io/lil-log/2018/04/08/policy-gradient-algorithms.html
+[A2Code]: https://github.com/openai/baselines/blob/master/baselines/a2c/a2c.py
+[A3C]: https://arxiv.org/pdf/1602.01783.pdf
