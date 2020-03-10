@@ -16,6 +16,14 @@ Jonas Otten
 Alexander Prochnow  
 Paul Jänsch
 
+### Outline
+
+1. Introduction/Motivation
+2. Important background knowledge
+3. Project development log
+4. The model and the experiment
+5. Visualization and results
+
 ### Introduction/Motivation
 
 ...
@@ -61,7 +69,7 @@ Even with our simple network architecure we were able to observe a considerable 
 
 ...
  
-
+### Visualization and results
 
 [LLC]: https://gym.openai.com/envs/LunarLanderContinuous-v2/
 [CP]: https://gym.openai.com/envs/CartPole-v1/
