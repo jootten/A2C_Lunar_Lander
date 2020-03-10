@@ -15,15 +15,18 @@ class Actor(Layer):
         
         self.sharedBatchNorm = keras_layers.BatchNormalization()
         
-        self.muFC1 = keras_layers.Dense(units=32, activation='relu')
+        self.muFC1 = keras_layers.Dense(units=32, activation='relu',)
+        self.muNorm = keras_layers.BatchNormalization()
         self.muFC2 = keras_layers.Dense(units=32, activation='relu')
         
+
         self.sigmaFC1 = keras_layers.Dense(units=32, activation='relu')
+        self.sigmaNorm = keras_layers.BatchNormalization()
         self.sigmaFC2 = keras_layers.Dense(units=32, activation='relu')
         
         
         self.mu_out = keras_layers.Dense(units=2, activation='tanh')
-        self.sigma_out = keras_layers.Dense(units=2, activation='sigmoid')
+        self.sigma_out = keras_layers.Dense(units=2, activation='softplus')
     
     def call(self, x):
         x = tf.convert_to_tensor(x)
@@ -33,11 +36,13 @@ class Actor(Layer):
         x = self.sharedBatchNorm(x, training=True)
         
         mu = self.muFC1(x)
+        mu = self.muNorm(mu)
         mu = self.muFC2(mu)
         mu = self.mu_out(mu)
         
         sigma = self.sigmaFC1(x)
         sigma = self.sigmaFC2(sigma)
+        sigma = self.sigmaNorm(sigma)
         sigma = self.sigma_out(sigma)     
         
         return mu, sigma
