@@ -4,7 +4,7 @@
 
 **For the course**:
 
-Implementing Artificial Neural Networks with Tensorflow (winter term 2019/20)
+Implementing Artificial Neural Networks (ANNs) with Tensorflow (winter term 2019/20)
 
 **Topic**:
 
@@ -26,7 +26,7 @@ Paul Jänsch
 
 ### Introduction/Motivation
 
-...
+As a final project of this course our task was to identify an interesting research paper in the field of ANNs and reproduce the content of the paper with the knowledge gained during this course. Inspired by the lecture about Reinforcement learning held by Leon S. we wanted to take the final project as an opportunity to gather some hands-on experience in this fascinating area.
 
 ### Important background knowledge
 
@@ -39,7 +39,9 @@ Sources used:
 
 Here we desribe how we approached the given problem, name the steps we have taken and lay out the motivation for the decisions we made in the process of this project. (Readers only interested in the final result with explanations to the important code segments can skip this part and can continue with the paragraph "The model and the experiment")
 
-**Phase 1** (implementing A2C for the discrete action space in the [CartPole][CP] environment:
+Instead of directly heading into the complex case of an environment with continuous action space, we decided to first starting with a simpler version of A2C. Namely, A2C for a discrete action space and without parallelization. For this we took the [CartPole][CP] gym environment. Mastering this environment was the objective of phase 1, which also can be seen as a prephase to phase 2 (the main phase)
+
+**Phase 1**:
 
 * getting the gym environment to run
 * setting up two simple networks for the actor and the critic
@@ -48,9 +50,9 @@ Here we desribe how we approached the given problem, name the steps we have take
  
 Even with our simple network architecure we were able to observe a considerable learning effect, finally leading to our agent mastering this simple environment. Although the training result was not stable enough (after several succesful episodes the agent started to get worse again) we decided to not optimize our setup on the CartPole environment, but instead switching to an environment with continous action space and optimizing our learning there. Which leads us to phase 2.
 
-**Phase 2** (implementing A2C for the continuous action space in the LunarLanderContinuous environment):
+**Phase 2**:
 
-* changing to the LunarLander gym environment
+* changing to the [LunarLanderContinuous][LLC] gym environment
 * deviding the current jupyter notebook into seperate python files(main.py, coordinator.py, agent.py, actor.py and critic.py)
  * the agent now contains the
      * creation of the environment,
