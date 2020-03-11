@@ -26,7 +26,7 @@ Paul Jänsch
 
 ### Introduction/Motivation
 
-As a final project of this course our task was to identify an interesting research paper in the field of ANNs and reproduce the content of the paper with the knowledge gained during this course. Inspired by the lecture about Reinforcement learning held by Leon S. we wanted to take the final project as an opportunity to gather some hands-on experience in this fascinating area.
+As a final project of this course our task was to identify an interesting research paper in the field of ANNs and reproduce the content of the paper with the knowledge gained during the course. Inspired by the [lecture about Deep Reinforcement Learning][LeonLect] (DLR) held by Leon Schmid we wanted to take the final project as an opportunity to gather some hands-on experience in this fascinating area. So Reinforcement Learning it is. But where to start? We were looking for something which offers a nice tradeoff between accessibility, challenge and chance of success. The [Gym environments][Gym] provided by OpenAI seemed to do just that. Most of them are set up and ready to run within a minute and with them there is no need to worry about how to access observations or perform actions. One can simply focus on implementing the wanted algorithm. Speaking of which, from all the classic DRL techniques we knew so far, the Advantage Actor-Critic algorithm (short A2C) seemed most appropriate for the extent of the project. Challenging but doable in a few weeks.
 
 ### Important background knowledge
 
@@ -79,3 +79,5 @@ Even with our simple network architecure we were able to observe a considerable 
 [Lil'Log]: https://lilianweng.github.io/lil-log/2018/04/08/policy-gradient-algorithms.html
 [A2Code]: https://github.com/openai/baselines/blob/master/baselines/a2c/a2c.py
 [A3C]: https://arxiv.org/pdf/1602.01783.pdf
+[Gym]: https://gym.openai.com/
+[LeonLect]: https://studip.uni-osnabrueck.de/sendfile.php?type=0&file_id=f0d5efee6a2faf80610f2540611efb47&file_name=IANNwTF_L12_Reinforcement_Learning.pdf
