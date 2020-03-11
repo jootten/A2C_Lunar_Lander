@@ -15,7 +15,7 @@ ENTROPY_COEFFICIENT = 0.001
 NUM_STEPS = 5
 
 class Coordinator:
-    def __init__(self, num_agents=8):
+    def __init__(self, num_agents=4):
         self.num_agents = num_agents
         self.agent_list = []
         self.memory = Memory(NUM_STEPS)
@@ -43,7 +43,7 @@ class Coordinator:
         self.train_summary_writer = tf.summary.create_file_writer(train_log_dir)
 
 
-    def run_for_episodes(self, num_updates=10000):
+    def run_for_episodes(self, num_updates=500000):
         # called from main
         for i_update in range(num_updates):
             memories = ray.get([agent.run.remote(self.actor, self.critic, NUM_STEPS) for agent in self.agent_list])
@@ -56,7 +56,7 @@ class Coordinator:
             # Render environment
             self.step += NUM_STEPS
 
-            if i_update % 50 == 0:
+            if i_update % 20 == 0:
                 self.test()
             #store summary statistics
             with self.train_summary_writer.as_default():
@@ -66,6 +66,19 @@ class Coordinator:
                 
                 # Critic loss
                 tf.summary.scalar('critic loss', self.critic_loss, step=self.step)
+            if i_update % 1000 == 0:
+                checkpoint_directory_a = "./training_checkpoints/actor"
+                checkpoint_directory_c = "./training_checkpoints/critic"
+                checkpoint_prefix_a = os.path.join(checkpoint_directory_a, f"{self.step}.ckpt")
+                checkpoint_prefix_c = os.path.join(checkpoint_directory_c, f"{self.step}.ckpt")
+                checkpoint = tf.train.Checkpoint(optimizer=self.actor_optimizer, model=self.actor)
+                checkpoint.save(file_prefix=checkpoint_prefix_a)
+                checkpoint = tf.train.Checkpoint(optimizer=self.critic_optimizer, model=self.critic)
+                checkpoint.save(file_prefix=checkpoint_prefix_c)
+
+
+
+
             
 
     def _entropy(self):

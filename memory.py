@@ -1,4 +1,7 @@
 import numpy as np
+import scipy.signal as signal
+
+GAMMA = 0.99
 
 class Memory:
     def __init__(self, num_steps):
@@ -8,11 +11,10 @@ class Memory:
         self.estimated_return = np.empty(shape=(num_steps, 1))
         self.terminals = []
     
-    def store(self, state, action, reward, estimated_return, done, t):
+    def store(self, state, action, reward, done, t):
         self.states[t] = state
         self.actions[t] = action
         self.rewards[t] = reward
-        self.estimated_return[t] = estimated_return
         self.terminals.append(done)
 
     def __add__(self, other):
@@ -28,3 +30,13 @@ class Memory:
             return self
         else:
             return self.__add__(other)
+
+    def compute_discounted_cum_return(self, critic):
+        idx = (len(self.rewards) - 1)
+        cumulative_return = 0 if self.terminals[idx] else critic(np.reshape(self.states[idx], [1,8]))
+        for i in range(idx, -1, -1):
+            self.estimated_return[i][0] = self.rewards[i][0] + GAMMA * cumulative_return
+            cumulative_return = 0 if self.terminals[i] else self.estimated_return[i][0]
+
+            
+        
