@@ -5,6 +5,7 @@ def main():
     coord = Coordinator()
     coord.run_for_episodes()
     #returns model at the end?
+    breakpoint()
     ray.shutdown()
 
 if __name__ == '__main__':
