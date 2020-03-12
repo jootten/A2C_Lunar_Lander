@@ -10,20 +10,12 @@ class Actor(Layer):
         
         # 64(share) -> 64(share) -> 32 -> 32 -> mu(tanh) [-1,1]
         # 64(share) -> 64(share) -> 32 -> 32 -> sigma(sigmoid) [0,1]
-        self.sharedFC1 = keras_layers.Dense(units=64, input_shape=[8,], activation='relu')
+        self.sharedFC1 = keras_layers.Dense(units=128, input_shape=[8,], activation='relu')
         self.sharedFC2 = keras_layers.Dense(units=64, activation='relu')
         
         self.sharedBatchNorm = keras_layers.BatchNormalization()
         
-        self.muFC1 = keras_layers.Dense(units=32, activation='relu',)
-        self.muNorm = keras_layers.BatchNormalization()
-        self.muFC2 = keras_layers.Dense(units=32, activation='relu')
-        
-
-        self.sigmaFC1 = keras_layers.Dense(units=32, activation='relu')
-        self.sigmaNorm = keras_layers.BatchNormalization()
-        self.sigmaFC2 = keras_layers.Dense(units=32, activation='relu')
-        
+        self.muFC1 = keras_layers.Dense(units=32, activation='relu')
         
         self.mu_out = keras_layers.Dense(units=2, activation='tanh')
         self.sigma_out = keras_layers.Dense(units=2, activation='softplus')
@@ -32,17 +24,10 @@ class Actor(Layer):
         x = tf.convert_to_tensor(x)
         x = self.sharedFC1(x)
         x = self.sharedFC2(x)
-        
-        x = self.sharedBatchNorm(x, training=True)
-        
-        mu = self.muFC1(x)
-        mu = self.muNorm(mu)
-        mu = self.muFC2(mu)
-        mu = self.mu_out(mu)
-        
-        sigma = self.sigmaFC1(x)
-        sigma = self.sigmaFC2(sigma)
-        sigma = self.sigmaNorm(sigma)
-        sigma = self.sigma_out(sigma)     
+        x = self.sharedBatchNorm(x)
+
+        x = self.muFC1(x)
+        mu = self.mu_out(x)
+        sigma = self.sigma_out(x)     
         
         return mu, sigma
