@@ -33,8 +33,12 @@ class Memory:
 
     def compute_discounted_cum_return(self, critic):
         idx = (len(self.rewards) - 1)
-        cumulative_return = 0 if self.terminals[idx] else critic(np.reshape(self.states[idx], [1,8]))
-        for i in range(idx, -1, -1):
+        if self.terminals[idx]:
+            cumulative_return = 0  
+        else:
+            cumulative_return = critic(np.reshape(self.states[idx], [1,8]))[0,0]
+        
+        for i in range(idx - 1, -1, -1):
             self.estimated_return[i][0] = self.rewards[i][0] + GAMMA * cumulative_return
             cumulative_return = 0 if self.terminals[i] else self.estimated_return[i][0]
 

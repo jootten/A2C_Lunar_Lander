@@ -47,5 +47,6 @@ class A2CAgent:
                 self.state = self.env.reset()
             if test and done:
                 break
-        self.memory.compute_discounted_cum_return(critic)
+        if not test:
+            self.memory.compute_discounted_cum_return(critic)
         return self.memory

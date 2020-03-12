@@ -12,15 +12,13 @@ from tensorflow_probability.python.distributions import Normal
 os.system("rm -rf ./logs/")
 
 ENTROPY_COEFFICIENT = 0.001
-NUM_STEPS = 5
+NUM_STEPS = 64
 
 class Coordinator:
-    def __init__(self, num_agents=4):
+    def __init__(self, num_agents=8):
         self.num_agents = num_agents
         self.agent_list = []
-        self.memory = Memory(NUM_STEPS)
-        self.batch_size = NUM_STEPS * self.num_agents
-        self.estimated_return = np.zeros(shape=(self.batch_size, 1))
+        self.memory = None
         self.step = 0
         self.actor_loss = None
         self.critic_loss = None
@@ -30,8 +28,10 @@ class Coordinator:
         self.critic = Critic()
         self.mse = tf.keras.losses.MeanSquaredError()
         self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate=0.00001)
-        self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate=0.00001)
-        
+        self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+        self.checkpoint_directory_a = "./training_checkpoints/actor"
+        self.checkpoint_directory_c = "./training_checkpoints/critic"
+
         self.entropy_coefficient = 0.001 # used to balance exploration
         
         # create multiple agents
@@ -48,7 +48,6 @@ class Coordinator:
         for i_update in range(num_updates):
             memories = ray.get([agent.run.remote(self.actor, self.critic, NUM_STEPS) for agent in self.agent_list])
             self.memory = sum(memories)
-            print(f"Update {i_update + 1} of {num_updates} finished with {self.num_agents} agents.")
             # calculate mean gradient over all agents and apply gradients to update models.
             mean_policy_gradients, mean_critic_gradients = self._get_mean_gradients()
             self.actor_optimizer.apply_gradients(zip(mean_policy_gradients, self.actor.trainable_variables))
@@ -56,7 +55,7 @@ class Coordinator:
             # Render environment
             self.step += NUM_STEPS
 
-            if i_update % 20 == 0:
+            if i_update % 8 == 0:
                 self.test()
             #store summary statistics
             with self.train_summary_writer.as_default():
@@ -67,14 +66,13 @@ class Coordinator:
                 # Critic loss
                 tf.summary.scalar('critic loss', self.critic_loss, step=self.step)
             if i_update % 1000 == 0:
-                checkpoint_directory_a = "./training_checkpoints/actor"
-                checkpoint_directory_c = "./training_checkpoints/critic"
-                checkpoint_prefix_a = os.path.join(checkpoint_directory_a, f"{self.step}.ckpt")
-                checkpoint_prefix_c = os.path.join(checkpoint_directory_c, f"{self.step}.ckpt")
+                checkpoint_prefix_a = os.path.join(self.checkpoint_directory_a, f"{self.step}-{2}.ckpt")
+                checkpoint_prefix_c = os.path.join(self.checkpoint_directory_c, f"{self.step}-{2}.ckpt")
                 checkpoint = tf.train.Checkpoint(optimizer=self.actor_optimizer, model=self.actor)
                 checkpoint.save(file_prefix=checkpoint_prefix_a)
                 checkpoint = tf.train.Checkpoint(optimizer=self.critic_optimizer, model=self.critic)
                 checkpoint.save(file_prefix=checkpoint_prefix_c)
+            print(f"Update {i_update + 1} of {num_updates} finished with {self.num_agents} agents.")
 
 
 
@@ -113,7 +111,7 @@ class Coordinator:
                 # Compute the statue value
                 state_v = self.critic(self.memory.states)
                 # Compute the critic loss
-                loss = self.mse(self.estimated_return, state_v)
+                loss = self.mse(self.memory.estimated_return, state_v)
             # Compute the gradients
             return loss, tape.gradient(loss, self.actor.trainable_variables if type == 'actor' else self.critic.trainable_variables)
 
@@ -129,7 +127,7 @@ class Coordinator:
         return Normal(loc=mu, scale=sigma)
 
     def test(self):
-        memory = ray.get(self.agent_list[0].run.remote(self.actor, self.critic, test=True, num_steps=500))
+        memory = ray.get(self.agent_list[0].run.remote(self.actor, self.critic, test=True, num_steps=200))
         accum_reward = memory.rewards.sum()
         # Store summary statistics
         with self.train_summary_writer.as_default():
