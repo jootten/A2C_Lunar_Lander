@@ -7,6 +7,9 @@ class Actor(Layer):
     
     def __init__(self):
         super(Actor, self).__init__()
+
+        self.lstm1 = keras_layers.lstm(64, return_sequences=True)
+        self.lstm2 = keras_layers.lstm(32)
         
         # 64(share) -> 64(share) -> 32 -> 32 -> mu(tanh) [-1,1]
         # 64(share) -> 64(share) -> 32 -> 32 -> sigma(sigmoid) [0,1]
@@ -21,12 +24,16 @@ class Actor(Layer):
         self.sigma_out = keras_layers.Dense(units=2, activation='softplus')
     
     def call(self, x):
-        x = tf.convert_to_tensor(x)
-        x = self.sharedFC1(x)
-        x = self.sharedFC2(x)
-        x = self.sharedBatchNorm(x)
+        # x = tf.convert_to_tensor(x)
+        # x = self.sharedFC1(x)
+        # x = self.sharedFC2(x)
+        # x = self.sharedBatchNorm(x)
 
-        x = self.muFC1(x)
+        # x = self.muFC1(x)
+
+        x = self.lstm1(x)
+        x = self.lstm2(x)
+
         mu = self.mu_out(x)
         sigma = self.sigma_out(x)     
         
