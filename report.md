@@ -19,12 +19,12 @@ Paul Jänsch
 ### Outline
 
 1. Introduction/Motivation
-2. Background
+2. Theoretical Background
 3. Project development log
 4. The model and the experiment
 5. Visualization and results
 
-### Introduction/Motivation
+### 1. Introduction/Motivation
 
 As a final project of this course one possible task was to identify an interesting research paper in the field of ANNs and reproduce the content of the paper with the knowledge gained during the course. In our case we first decided on what we wanted to implement and then looked for suitable papers on which we can base our work.  
 Inspired by the [lecture about Deep Reinforcement Learning][LeonLect] (DLR) held by Leon Schmid we wanted to take the final project as an opportunity to gather some hands-on experience in this fascinating area. So Reinforcement Learning it is. But where to start? We were looking for something which offers a nice tradeoff between accessibility, challenge and chance of success. The [Gym environments][Gym] provided by OpenAI seemed to do just that. Most of them are set up and ready to run within a minute and with them there is no need to worry about how to access observations or perform actions. One can simply focus on implementing the wanted algorithm.  
@@ -32,34 +32,44 @@ Speaking of which, from all the classic DRL techniques we knew so far, the Synch
 First, which environment exactly should our learning algorithm try to master using A2C? Since there are better solutions than A2C for environments with discrete action spaces, Leon recommended us to go with the [LunarLanderContinuous][LLC] environment.  
 And second, which A2C related papers provide us with the neccessary theoretical background and also practical inspiration on how to tackle the implementation? The answer to this question we want to give in the next section about background knowledge.
 
-### Background
+### 2. Theoretical Background
 
 In RL an agent is interacting with an environment by observing a state $s_t$ of a state space $S$ and taking an action $a_t$ of a action space $A$ at each discrete timestep $t$. Furthermore the agent receives a reward $r_t$ at particular timesteps after executing an action. The agents takes the actions accoring to a policy $\pi$. In the LunarLanderContinuous environment the agent receives a reward after each action taken.   
+
 We assume that the environment is modelled by a Markov decision process (MDP), which consists of a state transition function $\mathcal{P}$ giving the probability of transitioning from state $s_t$ to state $s_{t+1}$ after taking action $a_t$ and a reward function $\mathcal{R}$ determining the reward received by taking action $a_t$ in state $s_t$. The *Markov property* is an important element of a MDP, that is the state transition only dependes on the current state and action and not on the precending ones.  
-In RL the goal is to maximize the discounted return 
+In RL the goal is to maximize the cumulative discounted return at each timestep $t$:
 
 $$G_t = \sum_t^{\infty}{\gamma^{t} r_t}$$
 
-with $\gamma \in (0,1]$ at each timestep $t$. There are two estimates of the return, either the state value function $V^{\pi}(s_t)$ giving the estimated return at state $s_t$ following policy $\pi$ or the state action value function $Q(s_t, a_t)$ giving the estimated return at state $s_t$ when taking action $a_t$ and following policy $\pi$ afterwards. In classical RL this problem is approached by algorithms which consider each possible state and action in order to find an optimal solution for the policy $\pi$. In continuous state and/or action spaces this approch is computionally too hard.   
+with $\gamma \in (0,1]$ at each timestep $t$. There are two estimates of the return, either the state value function $V^{\pi}(s_t)$ giving the estimated return at state $s_t$ following policy $\pi$ or the state-action value function $Q(s_t, a_t)$ giving the estimated return at state $s_t$ when taking action $a_t$ and following policy $\pi$ afterwards. In classical RL this problem is approached by algorithms which consider each possible state and action in order to find an optimal solution for the policy $\pi$. In continuous state and/or action spaces this approch is computionally too hard. 
+
 In order to overcome this problem function approximation has been used to find a good solution for policy $\pi$, that maximizes the return $G_t$. Common function approximators are deep neural networks (DNNs), which gain raising success in RL as a way to find a good policy $\pi$ in large state and action spaces.  
-A large problem in the usage of DNNs for RL is the difficulty of computing the gradient in methods which estimate the policy $\pi_{\theta}$ with parameters $\theta$ directly. The reward function, which depends on the policy $\pi_{\theta}$, being maximized is defined by:
+
+A big problem in the usage of DNNs for RL is the difficulty of computing the gradient in methods, which estimate the policy $\pi_{\theta}$ with parameters $\theta$ directly. The reward function, which depends on the policy $\pi_{\theta}$, being maximized is defined by:
 
 $$J(\theta) = \sum_{s \in S} d^{\pi}(s) V^{\pi} = \sum_{s \in S} d^{\pi}(s) \sum_{a \in A}{\pi_{\theta}(a|s) Q^{\pi}(s,a))}$$
 
 $d^{\pi}(s)$ is the stationary distribution, that gives the probability of ending up in state $s$ when starting from state $s_0$ and following policy $\pi_{\theta}$. To compute the gradient $\nabla_{\theta}J(\theta)$ it is necessary to compute the gradient of the stationary distribution which depends on the policy and the transition function $d^{\pi}(s) = \lim_{t \to \infty}{\mathcal{P}(s|s_0, \pi_{\theta})}$, since the environment is unknown this is not possible.   
-A reformultation of the derivative of the reward function called the policy gradient theorem (proof: [Sutton & Barto, 2017][PFP]) avoids the calculation of the derivative of the stationary distribution:
+A reformulation of the gradient of the reward function called the policy gradient theorem (proof: [Sutton & Barto, 2017][PFP]) avoids the calculation of the derivative of the stationary distribution:
 
 $$
 \begin{aligned}
 \nabla_{\theta} J(\theta) &= \nabla_{\theta} \sum_{s \in S} d^{\pi}(s) \sum_{a \in A}{Q^{\pi}(s,a)) \pi_{\theta}(a|s)} \\ 
 &\propto \sum_{s \in S} d^{\pi}(s) \sum_{a \in A}{Q^{\pi}(s,a)) \nabla_{\theta} \pi_{\theta}(a|s)} \\
-&= \mathbb{E}[Q^{\pi}(s,a) \nabla_{\theta} \ln{\pi_{\theta}(a|s)}]
+&= \mathbb{E}_{\pi}[Q^{\pi}(s,a) \nabla_{\theta} \ln{\pi_{\theta}(a|s)}]
 \end{aligned}
 $$
 
-actor-critic
+This formula holds under the assumptions that the state distribution $s \sim d_{\pi_{\theta}}$ and the action distribution $a \sim \pi_{\theta}$ follow the policy $\pi_{\theta}$ (on-policy learning). The action-state value function acts as an incentive for the direction of the policy update and can be replaced by various terms, e.g. the advantage function $A_t$.
 
-a3c/a2c
+An algorithm that makes use of the policy gradient theorem is the actor-critic method. The critic updates the parameters $w$ of a value function and the actor updates the parameters $\theta$ of a policy according to the incentive of the critic. An extension of it is the synchronous advantage actor-critic method (A2C). Here multiple actors are running in parallel. A coordinator waits until each agent is finished with acting in an environment in a specified number of discrete timesteps (synchronous). The received rewards are used to compute the cumulative discounted return $G_t$ for each agent at each timestep. No we can get an estimate of the advantage $A_t$, that is used as incentive for the update of the policy: $A^w_t = G_t - V^w_t$. The gradients get accumulated w.r.t. the parameters $w$ of the value function and $\theta$ of the policy:
+$$
+\begin{aligned}
+d\theta &= d\theta + A_w\nabla_\theta \ln{\pi_{\theta}} \\
+dw &= dw + \nabla_w(G - V_w)^2
+\end{aligned}
+$$
+These gradients are used to update the parameters of the value function and the policy. After that all actors start with the same parameters. This algorithm is a variation of the original asynchronous actor-critic method ([A3C][A3C]), where each actor and critic updates the global parameters independently, which leads to actors and critics with different parameters.
 
 Sources used:
 * [the A3C paper][A3C]
