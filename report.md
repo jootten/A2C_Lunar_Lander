@@ -110,7 +110,25 @@ Even with our simple network architecure we were able to observe a considerable 
  
 ### The model and the experiment
 
-This section makes up the main part of our report. Here we will highlight and explain the important parts of our project's implementation. We are trying to present the code in the most semantic logical and intuitiv order to facilitate the comprehension. The code itself is already structured into several classes and we will always indicate which class we are currently talking about. We are starting with the coordinator class because, as its name suggests, it organizes the use of every other class and also the whole procedure of the training process. From there we will go step by step and jump into the other classes as they are coming up.
+This section makes up the main part of our report. Here we will highlight and explain the important parts of our project's implementation. We are trying to present the code in the most semantic logical and intuitiv order to facilitate the comprehension. The code itself is already structured into several classes and we will always indicate which class we are currently talking about.  
+We are starting with the coordinator class because, as its name suggests, it organizes the use of every other class and also the whole procedure of the learning process. From there we will go step by step and jump into the other classes as they are coming up.  
+The instantiation of the coordinator happens in the main.py and the execution of its constructor initializes everything needed for successful learning. The most crucial point in this part is probably the instantiation of the two Neural Networks which build the core of the A2C method, namely the Actor and the Critic. Let's take the chance to go into both classes and look at the architectures of the networks.
+
+The Critic:
+
+...
+
+The Actor:
+
+...
+
+Besides the actor and the critic the coordinator also creates the agent objects which will run parallel on the environment:
+
+The Agent:
+
+...
+
+
  
 ### Visualization and results
 
