@@ -8,12 +8,12 @@ class Actor(Layer):
     def __init__(self):
         super(Actor, self).__init__()
 
-        self.lstm1 = keras_layers.lstm(64, return_sequences=True)
-        self.lstm2 = keras_layers.lstm(32)
-        
+        self.lstm1 = keras_layers.LSTM(64, return_sequences=True, stateful=True)
+        self.lstm2 = keras_layers.LSTM(32, return_sequences=True, stateful=True)
+
         # 64(share) -> 64(share) -> 32 -> 32 -> mu(tanh) [-1,1]
         # 64(share) -> 64(share) -> 32 -> 32 -> sigma(sigmoid) [0,1]
-        self.sharedFC1 = keras_layers.Dense(units=128, input_shape=[8,], activation='relu')
+        self.sharedFC1 = keras_layers.Dense(units=128, activation='relu')
         self.sharedFC2 = keras_layers.Dense(units=64, activation='relu')
         
         self.sharedBatchNorm = keras_layers.BatchNormalization()
@@ -38,3 +38,7 @@ class Actor(Layer):
         sigma = self.sigma_out(x)     
         
         return mu, sigma
+
+    def reset_states(self):
+        self.lstm1.states = [None,None]
+        self.lstm2.states = [None,None]

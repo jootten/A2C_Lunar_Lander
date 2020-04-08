@@ -18,7 +18,7 @@ class A2CAgent:
 
     def get_action_distribution(self, state):
         mu, sigma = self.actor(state)
-        return Normal(loc=mu, scale=sigma)
+        return Normal(loc=mu[0], scale=sigma[0])
         
     def run(self, actor, critic, num_steps, test=False):
         self.num_steps = num_steps
@@ -33,7 +33,7 @@ class A2CAgent:
         for t in range(self.num_steps):
             #if test:
                 #self.env.render()
-            self.state = np.reshape(self.state, [1,8])
+            self.state = np.reshape(self.state, [1,1,8])
             # sample action from normal distribution
             action = self.get_action_distribution(self.state).sample()
             # Execute action and store action, state and reward

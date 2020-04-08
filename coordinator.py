@@ -8,14 +8,16 @@ from datetime import datetime
 import numpy as np
 import ray
 from tensorflow_probability.python.distributions import Normal
+physical_devices = tf.config.list_physical_devices('GPU')
+tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
 os.system("rm -rf ./logs/")
 
 ENTROPY_COEFFICIENT = 0.001
-NUM_STEPS = 64
+NUM_STEPS = 16
 
 class Coordinator:
-    def __init__(self, num_agents=8):
+    def __init__(self, num_agents=4):
         self.num_agents = num_agents
         self.agent_list = []
         self.memory = None
@@ -54,9 +56,10 @@ class Coordinator:
             self.critic_optimizer.apply_gradients(zip(mean_critic_gradients, self.critic.trainable_variables))
             # Render environment
             self.step += NUM_STEPS
+            #self.actor.reset_states()
 
-            if i_update % 8 == 0:
-                self.test()
+            #if i_update % 8 == 0:
+            #    self.test()
             #store summary statistics
             with self.train_summary_writer.as_default():
                 # Actor loss
@@ -106,7 +109,6 @@ class Coordinator:
                 # Compute the actor loss: 
                 # total loss = policy gradient loss - entropy * entropy coefficient +  value loss * Value coefficient 
                 loss = self._actor_loss() - self._entropy() * self.entropy_coefficient #+ value_loss * value_coefficient ? 
-                #breakpoint()
             else:
                 # Compute the statue value
                 state_v = self.critic(self.memory.states)
@@ -123,8 +125,9 @@ class Coordinator:
         return policy_gradients, critic_gradients
 
     def get_action_distribution(self, state):
+        state = np.reshape(state, (1, self.num_agents * NUM_STEPS, 8))
         mu, sigma = self.actor(state)
-        return Normal(loc=mu, scale=sigma)
+        return Normal(loc=mu[0], scale=sigma[0])
 
     def test(self):
         memory = ray.get(self.agent_list[0].run.remote(self.actor, self.critic, test=True, num_steps=200))
