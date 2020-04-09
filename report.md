@@ -128,11 +128,11 @@ The Agent:
 
 This class is declared as a Ray remote class, which has the following implications when instantiated:  
 
-* Instantiation must be done with Agent.remote() instead of Agent()
+* Instantiation must be done with `Agent.remote()` instead of `Agent()`
 * A worker process is started on a single thread of the GPU
 * A Agent object is instantiated on that worker
-* Methods of the Agent class called on multiple Agents can execute in parallel, but must be called with agent_Instance.function.remote()
-* Returns of a remote function call now return the task ID, the actual results can be obtained later when needed by calling ray.get(task_ID)
+* Methods of the Agent class called on multiple Agents can execute in parallel, but must be called with `agent_Instance.function.remote()`
+* Returns of a remote function call now return the task ID, the actual results can be obtained later when needed by calling `ray.get(task_ID)`
 
 ...
 
