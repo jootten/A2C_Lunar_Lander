@@ -4,9 +4,11 @@ import scipy.signal as signal
 GAMMA = 0.99
 
 class Memory:
-    def __init__(self, num_steps):
-        self.states = np.empty(shape=(num_steps, 8))
-        self.actions = np.empty(shape=(num_steps, 2))
+    def __init__(self, num_steps, obs_space_size, action_space_size):
+        self.obs_space_size = obs_space_size
+        self.action_space_size = action_space_size
+        self.states = np.empty(shape=(num_steps, obs_space_size))
+        self.actions = np.empty(shape=(num_steps, action_space_size))
         self.rewards = np.zeros(shape=(num_steps, 1))
         self.estimated_return = np.empty(shape=(num_steps, 1))
         self.terminals = []
@@ -36,7 +38,7 @@ class Memory:
         if self.terminals[idx]:
             cumulative_return = 0  
         else:
-            cumulative_return = critic(np.reshape(self.states[idx], [1,8]))[0,0]
+            cumulative_return = critic(np.reshape(self.states[idx], [1,self.obs_space_size]))[0,0]
         
         for i in range(idx - 1, -1, -1):
             self.estimated_return[i][0] = self.rewards[i][0] + GAMMA * cumulative_return

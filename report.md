@@ -108,6 +108,13 @@ Even with our simple network architecure we were able to observe a considerable 
  * we looked at different parallelization packages and after some testing we decided to go with [Ray][Ray]
  * Ray allowed us to run multiple agents on our CPUs/GPUs and with this significantly boosting our learning
  
+**Phase 3:**
+
+* added LSTM-Layers to Actor network for better performance
+* Have code infer parameters from environment
+
+
+ 
 ### The model and the experiment
 
 This section makes up the main part of our report. Here we will highlight and explain the important parts of our project's implementation. We are trying to present the code in the most semantic logical and intuitiv order to facilitate the comprehension. The code itself is already structured into several classes and we will always indicate which class we are currently talking about.  

@@ -8,8 +8,9 @@ from datetime import datetime
 import numpy as np
 import ray
 from tensorflow_probability.python.distributions import Normal
-physical_devices = tf.config.list_physical_devices('GPU')
-tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
+import gym
+#physical_devices = tf.config.list_physical_devices('GPU')
+#tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
 os.system("rm -rf ./logs/")
 
@@ -17,8 +18,10 @@ ENTROPY_COEFFICIENT = 0.001
 NUM_STEPS = 16
 
 class Coordinator:
-    def __init__(self, num_agents=4):
+    def __init__(self, num_agents=4, env_name='LunarLanderContinuous-v2'):
         self.num_agents = num_agents
+        temp_env = gym.make(env_name)
+        self.obs_space_size = temp_env.observation_space.shape[0]
         self.agent_list = []
         self.memory = None
         self.step = 0
@@ -26,7 +29,7 @@ class Coordinator:
         self.critic_loss = None
         
         # Initialize model, loss and optimizer
-        self.actor = Actor()
+        self.actor = Actor(temp_env)
         self.critic = Critic()
         self.mse = tf.keras.losses.MeanSquaredError()
         self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate=0.00001)
@@ -37,7 +40,7 @@ class Coordinator:
         self.entropy_coefficient = 0.001 # used to balance exploration
         
         # create multiple agents
-        self.agent_list = [A2CAgent.remote(NUM_STEPS) for _ in range(num_agents)]
+        self.agent_list = [A2CAgent.remote(NUM_STEPS, temp_env) for _ in range(num_agents)]
 
         # Prepare Tensorboard
         current_time = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -125,7 +128,7 @@ class Coordinator:
         return policy_gradients, critic_gradients
 
     def get_action_distribution(self, state):
-        state = np.reshape(state, (1, self.num_agents * NUM_STEPS, 8))
+        state = np.reshape(state, (1, self.num_agents * NUM_STEPS, self.obs_space_size))
         mu, sigma = self.actor(state)
         return Normal(loc=mu[0], scale=sigma[0])
 
