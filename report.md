@@ -34,9 +34,9 @@ And second, which A2C related papers provide us with the neccessary theoretical 
 
 ### 2. Theoretical Background
 
-In RL an agent is interacting with an environment by observing a state $s_t$ of a state space $S$ and taking an action $a_t$ of a action space $A$ at each discrete timestep $t$. Furthermore the agent receives a reward $r_t$ at particular timesteps after executing an action. The agents takes the actions accoring to a policy $\pi$. In the LunarLanderContinuous environment the agent receives a reward after each action taken.   
+In RL an agent is interacting with an environment by observing a state $s_t$ of a state space $S$ and taking an action $a_t$ of an action space $A$ at each discrete timestep $t$. Furthermore the agent receives a reward $r_t$ at particular timesteps after executing an action. The agents takes the actions accoring to a policy $\pi$. In the LunarLanderContinuous environment the agent receives a reward after each action taken.   
 
-We assume that the environment is modelled by a Markov decision process (MDP), which consists of a state transition function $\mathcal{P}$ giving the probability of transitioning from state $s_t$ to state $s_{t+1}$ after taking action $a_t$ and a reward function $\mathcal{R}$ determining the reward received by taking action $a_t$ in state $s_t$. The *Markov property* is an important element of a MDP, that is the state transition only dependes on the current state and action and not on the precending ones.  
+We assume that the environment is modelled by a Markov decision process (MDP), which consists of a state transition function $\mathcal{P}$ giving the probability of transitioning from state $s_t$ to state $s_{t+1}$ after taking action $a_t$ and a reward function $\mathcal{R}$ determining the reward received by taking action $a_t$ in state $s_t$. The *Markov property* is an important element of a MDP, that is the state transition only depends on the current state and action and not on the precending ones.  
 In RL the goal is to maximize the cumulative discounted return at each timestep $t$:
 
 $$G_t = \sum_t^{\infty}{\gamma^{t} r_t}$$
@@ -126,8 +126,15 @@ Besides the actor and the critic the coordinator also creates the agent objects 
 
 The Agent:
 
-...
+This class is declared as a Ray remote class, which has the following implications when instantiated:  
 
+* Instantiation must be done with Agent.remote() instead of Agent()
+* A worker process is started on a single thread of the GPU
+* A Agent object is instantiated on that worker
+* Methods of the Agent class called on multiple Agents can execute in parallel, but must be called with agent_Instance.function.remote()
+* Returns of a remote function call now return the task ID, the actual results can be obtained later when needed by calling ray.get(task_ID)
+
+...
 
  
 ### Visualization and results
