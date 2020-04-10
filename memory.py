@@ -37,6 +37,7 @@ class Memory:
             return self.__add__(other)
 
     def compute_discounted_cum_return(self, critic):
+        self.estimated_return.setflags(write=1)
         idx = (len(self.rewards) - 1)
         if self.terminals[idx]:
             cumulative_return = 0  

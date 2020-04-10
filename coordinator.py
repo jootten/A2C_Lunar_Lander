@@ -10,20 +10,21 @@ import ray
 import gym
 from tensorflow_probability.python.distributions import Normal
 import gym
+from ray.util import ActorPool
 physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
-print(physical_devices)
+#print(physical_devices)
 
 ENV = 'LunarLanderContinuous-v2'
 
 os.system("rm -rf ./logs/")
 
-ENTROPY_COEFFICIENT = 0.001
-NUM_STEPS = 16
+ENTROPY_COEFFICIENT = 0.0001
+NUM_STEPS = 64
 
 class Coordinator:
-    def __init__(self, num_agents=4, env_name='LunarLanderContinuous-v2'):
+    def __init__(self, num_agents=12, env_name='LunarLanderContinuous-v2'):
         self.num_agents = num_agents
         temp_env = gym.make(env_name)
         self.obs_space_size = temp_env.observation_space.shape[0]
@@ -33,13 +34,15 @@ class Coordinator:
         self.actor_loss = None
         self.critic_loss = None
         self.previous_recurrent_state = [None, None]
+        self.agents_recurrent_state = [None, None]
+        self.action_dist = None
         
         # Initialize model, loss and optimizer
         self.actor = Actor(temp_env)
         self.critic = Critic()
         self.mse = tf.keras.losses.MeanSquaredError()
         self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate=0.00001)
-        self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate=0.0005)
+        self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate=0.00001)
         self.checkpoint_directory_a = "./training_checkpoints/actor"
         self.checkpoint_directory_c = "./training_checkpoints/critic"
 
@@ -47,6 +50,7 @@ class Coordinator:
         
         # create multiple agents
         self.agent_list = [A2CAgent.remote(NUM_STEPS, temp_env) for _ in range(num_agents)]
+        self.pool = ActorPool(self.agent_list)
 
         # Prepare Tensorboard
         current_time = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -57,9 +61,15 @@ class Coordinator:
     def run_for_episodes(self, num_updates=500000):
         # called from main
         for i_update in range(num_updates):
-            memories = ray.get([agent.run.remote(self.actor, self.critic) for agent in self.agent_list])
+            
+            for s in range(NUM_STEPS):
+                states = ray.get([agent.observe.remote(s) for agent in self.agent_list])
+                action_dist, self.agents_recurrent_state = self.get_action_distribution(np.array(states), self.agents_recurrent_state)
+                actions = np.array(action_dist.sample())
+                memories =  list(self.pool.map(lambda a, v: a.execute.remote(v, s), actions))
+
+            [m.compute_discounted_cum_return(self.critic) for m in memories]
             self.memory = sum(memories)
-            del memories
             # calculate mean gradient over all agents and apply gradients to update models.
             mean_policy_gradients, mean_critic_gradients = self._get_mean_gradients()
             self.actor_optimizer.apply_gradients(zip(mean_policy_gradients, self.actor.trainable_variables))
@@ -77,7 +87,7 @@ class Coordinator:
                 
                 # Critic loss
                 tf.summary.scalar('critic loss', self.critic_loss, step=self.step)
-            if i_update % 1000 == 0:
+            if i_update % 500 == 0:
                 checkpoint_prefix_a = os.path.join(self.checkpoint_directory_a, f"{self.step}-{2}.ckpt")
                 checkpoint_prefix_c = os.path.join(self.checkpoint_directory_c, f"{self.step}-{2}.ckpt")
                 checkpoint = tf.train.Checkpoint(optimizer=self.actor_optimizer, model=self.actor)
@@ -93,7 +103,7 @@ class Coordinator:
 
     def _entropy(self):
         # get standard deviation values
-        std = self.get_action_distribution(self.memory.states).scale
+        std = self.action_dist.scale
         logstd = np.log(std)
         # use log std to calculate entropy
         entropy = tf.reduce_sum(logstd + .5 * np.log(2.0 * np.pi * np.e), axis=-1)
@@ -108,7 +118,8 @@ class Coordinator:
         advantages = self.memory.estimated_return - state_v
         advantages = tf.cast(advantages, tf.float32)
         # Get log probability of the taken action
-        logprob = self.get_action_distribution(self.memory.states).log_prob(self.memory.actions)
+        self.action_dist, self.previous_recurrent_state = self.get_action_distribution(self.memory.states, self.previous_recurrent_state, update=True)
+        logprob = self.action_dist.log_prob(self.memory.actions)
         # Advantage as baseline
         return -logprob * advantages
 
@@ -133,9 +144,11 @@ class Coordinator:
         self.critic_loss, critic_gradients = self._compute_gradients('critic')
         return policy_gradients, critic_gradients
 
-    def get_action_distribution(self, state):
-        mu, sigma, self.previous_recurrent_state = self.actor(state.reshape(self.num_agents, NUM_STEPS, self.obs_space_size), initial_state=self.previous_recurrent_state)
-        return Normal(loc=mu, scale=sigma)
+    def get_action_distribution(self, state, previous_recurrent_state, update=False):
+        if update:
+            state = state.reshape(self.num_agents, NUM_STEPS, self.obs_space_size)
+        mu, sigma, previous_recurrent_state = self.actor(state, initial_state=previous_recurrent_state)
+        return Normal(loc=mu, scale=sigma), previous_recurrent_state
 
     def test(self):
         memory = ray.get(self.agent_list[0].run.remote(self.actor, self.critic, test=True, num_steps=200))
