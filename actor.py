@@ -5,17 +5,19 @@ import tensorflow as tf
 # Action Value Fuction Estimator (q-network)
 class Actor(Layer):
     
-    def __init__(self):
+    def __init__(self, env):
         super(Actor, self).__init__()
  
         self.lstm1 = keras_layers.LSTM(64, return_sequences=True, return_state=True)
+        
+        self.action_space_size = 1 if env.action_space.shape == () else env.action_space.shape[0]
 
         self.batch_norm = keras_layers.BatchNormalization()
         
         self.lstm2 = keras_layers.LSTM(32, return_sequences=True, return_state=True)
-
-        self.mu_out = keras_layers.TimeDistributed(keras_layers.Dense(units=2, activation='tanh'))
-        self.sigma_out = keras_layers.TimeDistributed(keras_layers.Dense(units=2, activation='softplus'))
+        
+        self.mu_out = keras_layers.Dense(units=self.action_space_size, activation='tanh')
+        self.sigma_out = keras_layers.Dense(units=self.action_space_size, activation='softplus')
     
     def call(self, x, initial_state=[None, None]):
         x, s1_h, s1_c = self.lstm1(x, initial_state=initial_state[0])

@@ -34,9 +34,9 @@ And second, which A2C related papers provide us with the neccessary theoretical 
 
 ### 2. Theoretical Background
 
-In RL an agent is interacting with an environment by observing a state $s_t$ of a state space $S$ and taking an action $a_t$ of a action space $A$ at each discrete timestep $t$. Furthermore the agent receives a reward $r_t$ at particular timesteps after executing an action. The agents takes the actions accoring to a policy $\pi$. In the LunarLanderContinuous environment the agent receives a reward after each action taken.   
+In RL an agent is interacting with an environment by observing a state $s_t$ of a state space $S$ and taking an action $a_t$ of an action space $A$ at each discrete timestep $t$. Furthermore the agent receives a reward $r_t$ at particular timesteps after executing an action. The agents takes the actions accoring to a policy $\pi$. In the LunarLanderContinuous environment the agent receives a reward after each action taken.   
 
-We assume that the environment is modelled by a Markov decision process (MDP), which consists of a state transition function $\mathcal{P}$ giving the probability of transitioning from state $s_t$ to state $s_{t+1}$ after taking action $a_t$ and a reward function $\mathcal{R}$ determining the reward received by taking action $a_t$ in state $s_t$. The *Markov property* is an important element of a MDP, that is the state transition only dependes on the current state and action and not on the precending ones.  
+We assume that the environment is modelled by a Markov decision process (MDP), which consists of a state transition function $\mathcal{P}$ giving the probability of transitioning from state $s_t$ to state $s_{t+1}$ after taking action $a_t$ and a reward function $\mathcal{R}$ determining the reward received by taking action $a_t$ in state $s_t$. The *Markov property* is an important element of a MDP, that is the state transition only depends on the current state and action and not on the precending ones.  
 In RL the goal is to maximize the cumulative discounted return at each timestep $t$:
 
 $$G_t = \sum_t^{\infty}{\gamma^{t} r_t}$$
@@ -108,9 +108,41 @@ Even with our simple network architecure we were able to observe a considerable 
  * we looked at different parallelization packages and after some testing we decided to go with [Ray][Ray]
  * Ray allowed us to run multiple agents on our CPUs/GPUs and with this significantly boosting our learning
  
+**Phase 3:**
+
+* added LSTM-Layers to Actor network for better performance
+* Have code infer parameters from environment
+
+
+ 
 ### The model and the experiment
 
-This section makes up the main part of our report. Here we will highlight and explain the important parts of our project's implementation. We are trying to present the code in the most semantic logical and intuitiv order to facilitate the comprehension. The code itself is already structured into several classes and we will always indicate which class we are currently talking about. We are starting with the coordinator class because, as its name suggests, it organizes the use of every other class and also the whole procedure of the training process. From there we will go step by step and jump into the other classes as they are coming up.
+This section makes up the main part of our report. Here we will highlight and explain the important parts of our project's implementation. We are trying to present the code in the most semantic logical and intuitiv order to facilitate the comprehension. The code itself is already structured into several classes and we will always indicate which class we are currently talking about.  
+We are starting with the coordinator class because, as its name suggests, it organizes the use of every other class and also the whole procedure of the learning process. From there we will go step by step and jump into the other classes as they are coming up.  
+The instantiation of the coordinator happens in the main.py and the execution of its constructor initializes everything needed for successful learning. The most crucial point in this part is probably the instantiation of the two Neural Networks which build the core of the A2C method, namely the Actor and the Critic. Let's take the chance to go into both classes and look at the architectures of the networks.
+
+The Critic:
+
+...
+
+The Actor:
+
+...
+
+Besides the actor and the critic the coordinator also creates the agent objects which will run parallel on the environment:
+
+The Agent:
+
+This class is declared as a Ray remote class, which has the following implications when instantiated:  
+
+* Instantiation must be done with `Agent.remote()` instead of `Agent()`
+* A worker process is started on a single thread of the GPU
+* A Agent object is instantiated on that worker
+* Methods of the Agent class called on multiple Agents can execute in parallel, but must be called with `agent_Instance.function.remote()`
+* Returns of a remote function call now return the task ID, the actual results can be obtained later when needed by calling `ray.get(task_ID)`
+
+...
+
  
 ### Visualization and results
 
