@@ -7,16 +7,12 @@ class Critic(Layer):
     
     def __init__(self):
         super(Critic, self).__init__()
-        self.fc1 = keras_layers.Dense(units=128, input_shape=[8,], activation='relu')
-        
-        self.Dropout = keras_layers.Dropout(rate=0.2)
-
-        self.fc2 = keras_layers.Dense(units=64, activation='relu')
+        self.fc1 = keras_layers.Dense(units=128, input_shape=[8,], activation=None)
+        self.fc2 = keras_layers.Dense(units=64, activation=None)
         self.out = keras_layers.Dense(units=1, activation=None)
     
-    def call(self, x):
+    def call(self, x, training=False):
         x = self.fc1(x)
-        x = self.Dropout(x, training=True)
         x = self.fc2(x)
         x = self.out(x)
         return x

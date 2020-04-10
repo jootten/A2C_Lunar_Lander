@@ -17,6 +17,9 @@ class Memory:
         self.rewards[t] = reward
         self.terminals.append(done)
 
+    def reset(self, num_steps):
+        self.__init__(num_steps)
+
     def __add__(self, other):
         self.states = np.concatenate((self.states, other.states), axis=0)
         self.actions = np.concatenate((self.actions, other.actions), axis=0)
