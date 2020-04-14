@@ -119,32 +119,50 @@ Even with our simple network architecure we were able to observe a considerable 
 
 This section makes up the main part of our report. Here we will highlight and explain the important parts of our project's implementation. We are trying to present the code in the most semantic logical and intuitiv order to facilitate the comprehension. The code itself is already structured into several classes and we will always indicate which class we are currently talking about.  
 We are starting with the coordinator class because, as its name suggests, it organizes the use of every other class and also the whole procedure of the learning process. From there we will go step by step and jump into the other classes as they are coming up.  
-The instantiation of the coordinator happens in the main.py and the execution of its constructor initializes everything needed for successful learning. The most crucial point in this part is probably the instantiation of the two Neural Networks which build the core of the A2C method, namely the Actor and the Critic. Let's take the chance to go into both classes and look at the architectures of the networks.
+The instantiation of the coordinator happens in the main.py **(main.py line 21)** and the execution of its constructor initializes everything needed for successful learning. The most crucial point in this part is probably the instantiation of the two Neural Networks which build the core of the A2C method, namely the Actor and the Critic. **(coordinator.py line 42-49)** As one can see here, network related things like the loss function and the optimizers are also created at this point. But let's take the chance to go into both classes and look at the architectures of the networks.
 
 The Critic:
 
-...
+... **(screenshots of critic.py)** 
 
 The Actor:
 
-...
+... **(screenshots of actor.py)** 
 
-Besides the actor and the critic the coordinator also creates the agent objects which will run parallel on the environment:
+Back in the init() method of the coordinator, there is one more important step to talk about. The creation of the agents which will run on the environment in a  parallel manner. **(coordinator.py line 51-52)** The instantiation of the agents exhibits an anomaly: the keyword ".remote". This is necessary, because the agent class is declared as a Ray remote class, which has the following implications when instantiated:  
 
-The Agent:
-
-This class is declared as a Ray remote class, which has the following implications when instantiated:  
-
-* Instantiation must be done with `Agent.remote()` instead of `Agent()`
+* Instantiation must be done with `Agent.remote()` instead of `Agent()` as seen in the screenshot
 * A worker process is started on a single thread of the GPU
 * A Agent object is instantiated on that worker
 * Methods of the Agent class called on multiple Agents can execute in parallel, but must be called with `agent_Instance.function.remote()`
 * Returns of a remote function call now return the task ID, the actual results can be obtained later when needed by calling `ray.get(task_ID)`
 
-...
+The rest of the coordinator's init() just deals with the preperation of the thensorboard in order to be able to inspect the training progress.  
+Now that our coordinator is fully operational we can start the training by calling its train() method in the main.py **(main.py line 22)**   
+This method is the heart of the coordinator and will be assisted by quite a lot helper methods and also some other classes we did not talked about in detail yet. We will go through all of them and explain their use in the order they are needed in the train() method.  
+
+possible structure in train():
+
+* step_parallel() only mlp part  
+ * agent's observe()
+ * get_action_distribution()
+ * agent's execute() 
+   * take a look at the agent's init() because of the memory object initialized there and talk about the memory class itself
+* compute_discounted_cum_return() of memory class in line 69 of coordinator
+* get_mean_gradients() in line 72 of coordinator
+ * compute_gradients()
+   * actor_loss()
+   * entropy()
+* apply_gradients to the networks in line 73-74
+* the part storing summary statistics
+* the part with checkpoints
+
+
 
  
 ### Visualization and results
+
+...
 
 [LLC]: https://gym.openai.com/envs/LunarLanderContinuous-v2/
 [CP]: https://gym.openai.com/envs/CartPole-v1/
