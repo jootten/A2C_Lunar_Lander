@@ -20,10 +20,10 @@ ENV = 'LunarLanderContinuous-v2'
 os.system("rm -rf ./logs/")
 
 ENTROPY_COEFFICIENT = 0.001
-NUM_STEPS = 64
+NUM_STEPS = 25
 
 class Coordinator:
-    def __init__(self, num_agents=8, env_name='LunarLanderContinuous-v2', network='lstm'):
+    def __init__(self, num_agents=12, env_name='LunarLanderContinuous-v2', network='lstm'):
         self.num_agents = num_agents
         temp_env = gym.make(env_name)
         self.obs_space_size = temp_env.observation_space.shape[0]
@@ -46,7 +46,7 @@ class Coordinator:
         self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate=0.005)
         self.checkpoint_directory_a = f"./training_checkpoints/{self.network}/actor"
         self.checkpoint_directory_c = f"./training_checkpoints/{self.network}/critic"
-        self.entropy_coefficient = 0.01 # used to balance exploration
+        self.entropy_coefficient = 0.001 # used to balance exploration
         
         # create multiple agents
         self.agent_list = [A2CAgent.remote(NUM_STEPS, env_name) for _ in range(num_agents)]
@@ -62,7 +62,6 @@ class Coordinator:
         cum_return = 0
         
         for i_update in range(num_updates):
-            
             for s in range(NUM_STEPS):
                 memories = self.step_parallel(s)
 
