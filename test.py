@@ -20,7 +20,7 @@ def test_run(network="mlp", environment='LunarLanderContinuous-v2'):
     env = gym.make(environment)
     all_returns = 0
     rec_state = [None, None]
-    for _ in range(200):    
+    for _ in range(500):    
         cum_return = 0 
         state = env.reset()
         while True:

@@ -1,54 +1,58 @@
 import os
-from agent import A2CAgent
-from actor import Actor
-from memory import Memory
-from critic import Critic
-import tensorflow as tf
 from datetime import datetime
+
 import numpy as np
+import tensorflow as tf
+from tensorflow_probability.python.distributions import Normal
+
 import ray
 import gym
-from tensorflow_probability.python.distributions import Normal
-import gym
+
+from agent import A2CAgent
+from memory import Memory
+
+from actor import Actor
+from critic import Critic
+
 physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
-#print(physical_devices)
-
-ENV = 'LunarLanderContinuous-v2'
 
 os.system("rm -rf ./logs/")
 
-ENTROPY_COEFFICIENT = 0.001
-NUM_STEPS = 25
+
+NUM_STEPS = 40
+ENTROPY_COEF = 0.001 # used to balance exploration
 
 class Coordinator:
-    def __init__(self, num_agents=12, env_name='LunarLanderContinuous-v2', network='lstm'):
+    def __init__(self, num_agents=8, env_name='LunarLanderContinuous-v2', network='mlp'):
+        # set up environment, observation memory 
         self.num_agents = num_agents
+        self.network = network
         temp_env = gym.make(env_name)
         self.obs_space_size = temp_env.observation_space.shape[0]
-        self.agent_list = []
         self.memory = None
-        self.step = 0
-        self.actor_loss = None
-        self.critic_loss = None
-        self.previous_recurrent_state = [None, None]
-        self.agents_recurrent_state = [None, None] 
-        self.action_dist = None
-        self.network = network
-        self.agents_recurrent_state = [None, None]
         
         # Initialize model, loss and optimizer
         self.actor = Actor(temp_env, network)
         self.critic = Critic()
-        self.mse = tf.keras.losses.MeanSquaredError()
         self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate=0.00005)
         self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate=0.005)
+        self.mse = tf.keras.losses.MeanSquaredError()
+        self.actor_loss = None
+        self.critic_loss = None
+
+        # instantiate variable to store recurrent states of the agents
+        self.agents_recurrent_state = [None, None]
+
+        # store action distribution during update
+        self.action_dist = None
+
+        # Set up checkpoint paths
         self.checkpoint_directory_a = f"./training_checkpoints/{self.network}/actor"
         self.checkpoint_directory_c = f"./training_checkpoints/{self.network}/critic"
-        self.entropy_coefficient = 0.001 # used to balance exploration
         
-        # create multiple agents
+        # instantiate multiple agents (ray actors)
         self.agent_list = [A2CAgent.remote(NUM_STEPS, env_name) for _ in range(num_agents)]
 
         # Prepare Tensorboard
@@ -56,17 +60,21 @@ class Coordinator:
         train_log_dir = 'logs/gradient_tape/' + current_time + '/train'
         self.train_summary_writer = tf.summary.create_file_writer(train_log_dir)
 
+        self.step = 0
 
-    def run_for_episodes(self, num_updates=500000):
+
+    def train(self, num_updates=500000):
         # called from main
         cum_return = 0
         
         for i_update in range(num_updates):
-            for s in range(NUM_STEPS):
-                memories = self.step_parallel(s)
-
+            # Collect num_agents * num_steps observations
+            for t in range(NUM_STEPS):
+                memories = self.step_parallel(t)
+            # Compute discounted return and concatenate memories from all agents
             [m.compute_discounted_cum_return(self.critic) for m in memories]
             self.memory = sum(memories)
+
             # calculate mean gradient over all agents and apply gradients to update models.
             mean_policy_gradients, mean_critic_gradients = self._get_mean_gradients()
             self.actor_optimizer.apply_gradients(zip(mean_policy_gradients, self.actor.trainable_variables))
@@ -87,10 +95,10 @@ class Coordinator:
                     cum_return = sum(self.memory.rewards[idx:NUM_STEPS,0])
                 else:
                     cum_return += sum(self.memory.rewards[:NUM_STEPS,0])
-                
                 # Critic loss
                 tf.summary.scalar('critic loss', self.critic_loss, step=self.step)
 
+            # Store actor and critic model checkpoints
             if i_update % 500 == 0:
                 checkpoint_prefix_a = os.path.join(self.checkpoint_directory_a, f"{self.step}-{2}.ckpt")
                 checkpoint_prefix_c = os.path.join(self.checkpoint_directory_c, f"{self.step}-{2}.ckpt")
@@ -102,25 +110,34 @@ class Coordinator:
 
 
 
-    def step_parallel(self, s):
+    def step_parallel(self, t):
+        # Compute one step on all envs in parallel with lstm as policy network
         if self.network == "lstm":
-            states, dones = zip(*(ray.get([agent.observe.remote(s) for agent in self.agent_list])))
+            # Observe state to compute an action for the next time step
+            states, dones = zip(*(ray.get([agent.observe.remote(t) for agent in self.agent_list])))
             if  (True in dones):    
                 mask = np.ones((self.num_agents, 32))
                 mask[dones,:] = 0
+                # mask recurrent state to reset it for finished environments
                 self.agents_recurrent_state = list(map(lambda x: list(map(lambda y: y * mask, x)), self.agents_recurrent_state))
+            # Sample action from the normal distribution given by the policy
             action_dist, self.agents_recurrent_state = self.get_action_distribution(np.array(states), recurrent_state=self.agents_recurrent_state)
             actions = np.array(action_dist.sample())
 
+        # Compute one step on all envs in parallel with mlp as policy network
         if self.network == "mlp":
-            states, dones = zip(*(ray.get([agent.observe.remote(s) for agent in self.agent_list])))
+            # Observe state to compute an action for the next time step
+            states, dones = zip(*(ray.get([agent.observe.remote(t) for agent in self.agent_list])))
             action_dist, _ = self.get_action_distribution(np.array(states))
+            # Sample action from the normal distribution given by the policy
             actions = np.array(action_dist.sample())
 
-        memories = ray.get([agent.execute.remote(actions[i], s) for i, agent in enumerate(self.agent_list)])
+        # Execute action and obtain memory after num_steps
+        memories = ray.get([agent.execute.remote(actions[i], t) for i, agent in enumerate(self.agent_list)])
         return memories
 
     def get_action_distribution(self, state, recurrent_state=[None, None], update=False):
+        # Get the normal distribution over the action space, determined by mu and sigma
         if self.network == "lstm":
             if update:
                 state = state.reshape(self.num_agents, NUM_STEPS, self.obs_space_size)
@@ -142,8 +159,7 @@ class Coordinator:
         with tf.GradientTape() as tape:
             if type == 'actor':
                 # Compute the actor loss: 
-                # total loss = policy gradient loss - entropy * entropy coefficient +  value loss * Value coefficient 
-                loss = self._actor_loss() - self._entropy() * self.entropy_coefficient #+ value_loss * value_coefficient ? 
+                loss = self._actor_loss() - self._entropy() * ENTROPY_COEF
                 #loss = tf.reduce_mean(loss, axis=0)
             else:
                 # Compute the statue value

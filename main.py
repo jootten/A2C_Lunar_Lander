@@ -26,7 +26,7 @@ def main():
             num_agents=args.num_agents, 
             network=args.network_type, 
             env_name=args.environment)
-        coord.run_for_episodes()
+        coord.train()
 
     if args.test:
         from test import test_run

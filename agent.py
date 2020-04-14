@@ -9,7 +9,7 @@ class A2CAgent:
     def __init__(self, num_steps, env):
         self.env = gym.make(env)
         self.num_steps = num_steps
-        self.finished = Falgise
+        self.finished = False
 
         # environment parameters
         self.obs_space_size = self.env.observation_space.shape[0]

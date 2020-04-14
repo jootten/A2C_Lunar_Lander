@@ -16,9 +16,9 @@ class Actor(Layer):
             self.lstm2 = keras_layers.LSTM(32, return_sequences=True, return_state=True)
 
         if self.type == "mlp":
-            self.fc1 = keras_layers.Dense(units=128, activation='relu')
-            self.fc2 = keras_layers.Dense(units=64, activation='relu')
-            self.fc3 = keras_layers.Dense(units=32, activation='relu')
+            self.fc1 = keras_layers.Dense(units=128, activation='relu', kernel_regularizer="l2")
+            self.fc2 = keras_layers.Dense(units=64, activation='relu', kernel_regularizer="l2")
+            self.fc3 = keras_layers.Dense(units=32, activation='relu', kernel_regularizer="l2")
         
         self.batch_norm = keras_layers.BatchNormalization()
         
