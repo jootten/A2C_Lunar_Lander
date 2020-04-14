@@ -21,7 +21,7 @@ class A2CAgent:
         self.memory = Memory(self.num_steps, self.obs_space_size, self.action_space_size)
 
     def observe(self, t):
-        # reset memory for new episode
+        # reset memory for new network update
         if t == 0:
             self.memory.reset(self.num_steps, self.obs_space_size, self.action_space_size)
 
