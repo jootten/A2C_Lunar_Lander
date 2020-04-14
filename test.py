@@ -10,10 +10,10 @@ tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
 def main():
     temp_env = gym.make('LunarLanderContinuous-v2')
-    actor = Actor(temp_env)
+    actor = Actor(temp_env, network="mlp")
     adam = tf.keras.optimizers.Adam()
 
-    checkpoint_directory_a = "./training_checkpoints/actor"
+    checkpoint_directory_a = "./training_checkpoints/mlp/actor"
     checkpoint = tf.train.Checkpoint(optimizer=adam, model=actor)
     status = checkpoint.restore(tf.train.latest_checkpoint(checkpoint_directory_a))
 
@@ -24,7 +24,7 @@ def main():
         cum_return = 0 
         state = env.reset()
         while True:
-            #env.render()
+            env.render()
             state = np.reshape(state, (1,1,8))
             action_dist, rec_state = get_action_distribution(actor, state, rec_state) 
             action = action_dist.sample()[0]

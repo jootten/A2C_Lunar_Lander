@@ -43,10 +43,12 @@ class Memory:
             cumulative_return = 0  
         else:
             cumulative_return = critic(np.reshape(self.states[idx], [1,self.obs_space_size]))[0,0]
-        
-        for i in range(idx - 1, -1, -1):
+        #self.estimated_return[idx][0] = cumulative_return
+        for i in range(idx, -1, -1):
+            if self.terminals[i]:    
+                cumulative_return = 0
             self.estimated_return[i][0] = self.rewards[i][0] + GAMMA * cumulative_return
-            cumulative_return = 0 if self.terminals[i] else self.estimated_return[i][0]
+            cumulative_return = self.estimated_return[i][0]
 
             
         

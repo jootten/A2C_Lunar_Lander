@@ -1,18 +1,26 @@
 from coordinator import Coordinator
+from tensorboard import program
 import ray
+import argparse
+
 def main(): 
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--train", default=True, help="training (true) or test (false) run", type=bool)
+    parser.add_argument("--network_type", default="mlp", help="""type of the policy network ["mlp", "lstm"]""", type=str)
+    args = parser.parse_args()
+
+    tb = program.TensorBoard()
+    tb.configure(argv=[None, '--logdir', './logs'])
+    tb.launch()
+
     ray.init(
-        num_gpus=0,
-        memory=500 * 1024 * 1024,
-        object_store_memory=400 * 1024 * 1024,
-        driver_object_store_memory=100 * 1024 * 1024
+    memory= 1024 * 512 * 200,
+    object_store_memory=1024 * 1024 * 1000
     )
 
-    coord = Coordinator() # env_name='CartPole-v1')
+    coord = Coordinator(network=args.network_type)
     coord.run_for_episodes()
-    #returns model at the end?
-    ray.shutdown()
 
+    ray.shutdown()
 if __name__ == '__main__':
     main()
-    
