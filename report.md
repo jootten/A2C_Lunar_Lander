@@ -109,13 +109,20 @@ Even with our simple network architecure we were able to observe a considerable 
  * Ray allowed us to run multiple agents on our CPUs/GPUs in parallel and with this significantly boosting our learning  
  
 With the speed-up provided by the parallelization and further fixes of minor but sometimes critical issues we were finally able to observe our agents learning useful behaviour in the LunarLander environment up to the point where the Lander actually stoped chrashing down on the moon every single time and made its first successful landings. That's one small step for the RL research, one giant leap for our team.  
-But we were not quite satisfied with the result yet. The learning process was still very slow and so we decided to add one more ingredient: Long short-term memory or LSTM for short. Adding LSTM to the actor network is said to greatly imporve its performance. Further it might enable our agents to solve other environments, like the [BipedalWalker][BiWalk], which require some kind of longer lasting memory.  
+But we were not quite satisfied with the result yet. The learning process was still very slow and so we decided to add one more ingredient: Long short-term memory or LSTM for short. Adding LSTM to the actor network is said to greatly improve its performance. Further it might enable our agents to solve other environments, like the [BipedalWalker][BiWalk], which require some kind of longer lasting memory.  
 We advanced into the last phase of our project, which mainly deals with improvements like the implementation of LSTM but also with cleaning, restructuring and polishing the code to achieve its final form.
  
 **Phase 3:**
 
-* added LSTM-Layers to Actor network for better performance
-* Have code infer parameters from environment
+* LSTM implementation:
+ * adding the pre-build LSTM-Layers by Keras to the Actor network
+ * expanding the parameter list of the actor's constructor such that one can choose whether the network should use the newly added LSTM layers or the previously used Dense layers
+ * **(describe problems of LSTM here and write that we will not remove the LSTM code beacuse it is a nice approach and the default learning can still be done with the Dense Layers)**
+* have code infer parameters from environment
+* adding an ArgumentParser to the main.py to allow for different settings to be used when calling the main.py (test/training run, type of actor network, number of agents used, type of environment)
+* cleaning the code:
+ * removing old unused code parts
+ * adding necessary comments to the code
 
  
 ### The model and the experiment
@@ -157,7 +164,9 @@ possible structure in train():
  * agent's execute()   
    * **(line 44-48)**
    * Perform the action given as an argument to the function and store the resulting state and reward returned by the environment, then update the internal state `self.state` and the finished flag
-   * Our observations are stored by the memory object instantiated from our Memory class (memory.py). It is initialized in the agents `__init__` and posseses numpy arrays to store states, actions, rewards, estimated returns and terminal booleans denoting wether the episode is done or not **(line 10-14?)**. Observations are stored in the arrays via the index representing the timesteps **(line 16-20)**
+   * Our observations are stored by the memory object instantiated from our Memory class (memory.py). It is initialized in the agents `__init__` and posseses numpy arrays to store states, actions, rewards, estimated returns and terminal booleans denoting wether the episode is done or not **(line 10-14?)**. Observations are stored in the arrays via the index representing the timesteps **(line 16-20)**   
+   
+   
    ![memory.store](report_screenshots/memory.store.png)
    
    * Returning an array of the memory objects for each agent to the coordinator, we now compute the discounted cummulative return for each memory object and store it in the attribute self.estimated_return **(compute_discounted_cum_return of memory.py)**
