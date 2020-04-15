@@ -1,5 +1,7 @@
 ## Project report
 
+<img src="report_screenshots/arcade_logo.png" width="380" />
+
 ### General informations
 
 **For the course**:
