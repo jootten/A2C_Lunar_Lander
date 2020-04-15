@@ -20,14 +20,13 @@ tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
 os.system("rm -rf ./logs/")
 
-
-NUM_STEPS = 40
 ENTROPY_COEF = 0.001 # used to balance exploration
 
 class Coordinator:
-    def __init__(self, num_agents=8, env_name='LunarLanderContinuous-v2', network='mlp'):
+    def __init__(self, num_agents=8, env_name='LunarLanderContinuous-v2', network='mlp', num_steps=32):
         # set up environment, observation memory 
         self.num_agents = num_agents
+        self.num_steps=num_steps
         self.network = network
         temp_env = gym.make(env_name)
         self.obs_space_size = temp_env.observation_space.shape[0]
@@ -37,7 +36,7 @@ class Coordinator:
         self.actor = Actor(temp_env, network)
         self.critic = Critic()
         self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate=0.00005)
-        self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate=0.005)
+        self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate=0.01)
         self.mse = tf.keras.losses.MeanSquaredError()
         self.actor_loss = None
         self.critic_loss = None
@@ -52,8 +51,9 @@ class Coordinator:
         self.checkpoint_directory_a = f"./training_checkpoints/{self.network}/actor"
         self.checkpoint_directory_c = f"./training_checkpoints/{self.network}/critic"
         
-        # instantiate multiple agents (ray actors)
-        self.agent_list = [A2CAgent.remote(NUM_STEPS, env_name) for _ in range(num_agents)]
+        # instantiate multiple agents (ray actors) and set first one as chief
+        self.agent_list = [A2CAgent.remote(self.num_steps, env_name) for _ in range(num_agents)]
+        self.agent_list[0].set_chief.remote(True)
 
         # Prepare Tensorboard
         current_time = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -63,13 +63,13 @@ class Coordinator:
         self.step = 0
 
 
-    def train(self, num_updates=500000):
+    def train(self, num_updates=5000):
         # called from main
         cum_return = 0
-        
+        num_epsisodes = 0
         for i_update in range(num_updates):
             # Collect num_agents * num_steps observations
-            for t in range(NUM_STEPS):
+            for t in range(self.num_steps):
                 memories = self.step_parallel(t)
             # Compute discounted return and concatenate memories from all agents
             [m.compute_discounted_cum_return(self.critic) for m in memories]
@@ -80,7 +80,7 @@ class Coordinator:
             self.actor_optimizer.apply_gradients(zip(mean_policy_gradients, self.actor.trainable_variables))
             self.critic_optimizer.apply_gradients(zip(mean_critic_gradients, self.critic.trainable_variables))
             
-            self.step += NUM_STEPS
+            self.step += self.num_steps
 
             #store summary statistics
             with self.train_summary_writer.as_default():
@@ -88,25 +88,26 @@ class Coordinator:
                 tf.summary.scalar('policy loss main engine', tf.reduce_mean(self.actor_loss[0], axis=0), step=self.step)
                 tf.summary.scalar('policy loss side engines', tf.reduce_mean(self.actor_loss[1], axis=0), step=self.step)
                 # Cumulative Return
-                if True in self.memory.terminals[0:NUM_STEPS]:
+                if True in self.memory.terminals[0:self.num_steps]:
                     idx = self.memory.terminals.index(True) + 1
                     cum_return += sum(self.memory.rewards[:idx,0])
                     tf.summary.scalar('cumulative return', cum_return, step=self.step)
-                    cum_return = sum(self.memory.rewards[idx:NUM_STEPS,0])
+                    cum_return = sum(self.memory.rewards[idx:self.num_steps,0])
                 else:
-                    cum_return += sum(self.memory.rewards[:NUM_STEPS,0])
+                    cum_return += sum(self.memory.rewards[:self.num_steps,0])
                 # Critic loss
                 tf.summary.scalar('critic loss', self.critic_loss, step=self.step)
 
             # Store actor and critic model checkpoints
-            if i_update % 500 == 0:
+            if (i_update + 1) % 500 == 0:
                 checkpoint_prefix_a = os.path.join(self.checkpoint_directory_a, f"{self.step}-{2}.ckpt")
                 checkpoint_prefix_c = os.path.join(self.checkpoint_directory_c, f"{self.step}-{2}.ckpt")
                 checkpoint = tf.train.Checkpoint(optimizer=self.actor_optimizer, model=self.actor)
                 checkpoint.save(file_prefix=checkpoint_prefix_a)
                 checkpoint = tf.train.Checkpoint(optimizer=self.critic_optimizer, model=self.critic)
                 checkpoint.save(file_prefix=checkpoint_prefix_c)
-            print(f"Update {i_update + 1} of {num_updates} finished with {self.num_agents} agents.")
+            num_epsisodes += sum(self.memory.terminals)
+            print(f"Update {i_update + 1} of {num_updates} finished with {self.num_agents} agents after {num_epsisodes}.")
 
 
 
@@ -140,7 +141,7 @@ class Coordinator:
         # Get the normal distribution over the action space, determined by mu and sigma
         if self.network == "lstm":
             if update:
-                state = state.reshape(self.num_agents, NUM_STEPS, self.obs_space_size)
+                state = state.reshape(self.num_agents, self.num_steps, self.obs_space_size)
             mu, sigma, recurrent_state = self.actor(state, initial_state=recurrent_state)
             return Normal(loc=mu, scale=sigma), recurrent_state
         
@@ -159,7 +160,7 @@ class Coordinator:
         with tf.GradientTape() as tape:
             if type == 'actor':
                 # Compute the actor loss: 
-                loss = self._actor_loss() - self._entropy() * ENTROPY_COEF
+                loss = self._actor_loss() + self.action_dist.entropy() * ENTROPY_COEF
                 #loss = tf.reduce_mean(loss, axis=0)
             else:
                 # Compute the statue value
@@ -181,14 +182,14 @@ class Coordinator:
         # Advantage as baseline
         return -logprob * advantages
 
-    def _entropy(self):
+    #def _entropy(self):
         # get standard deviation values
-        std = self.action_dist.scale
-        logstd = np.log(std)
+        #std = self.action_dist.scale
+        #logstd = np.log(std)
         # use log std to calculate entropy
-        entropy = tf.reduce_sum(logstd + .5 * np.log(2.0 * np.pi * np.e), axis=-1)
-        # expand dimensions t
-        entropy = tf.expand_dims(entropy,1)
-        return tf.reduce_mean(entropy)
-
+        #entropy = logstd + .5 * np.log(2.0 * np.pi * np.e)
+        #entropy = tf.expand_dims(entropy,1)
+        #entropy = tf.reduce_mean(entropy)
+    #    entropy = self.action_dist.entropy()
+    #    return entropy
 

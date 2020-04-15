@@ -27,12 +27,12 @@ class Memory:
         self.__init__(num_steps, obs_space_size, action_space_size)
 
     def __add__(self, other):
-        # used for summing up the memory instances of all agents 
+        # used for concatenating the memory instances of all agents 
         self.states = np.concatenate((self.states, other.states), axis=0)
         self.actions = np.concatenate((self.actions, other.actions), axis=0)
         self.rewards = np.concatenate((self.rewards, other.rewards), axis=0)
         self.estimated_return = np.concatenate((self.estimated_return, other.estimated_return), axis=0)
-        self.terminals.append(other.terminals)
+        self.terminals.extend(other.terminals)
         return self
 
     def __radd__(self, other):

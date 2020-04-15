@@ -7,6 +7,7 @@ from memory import Memory
 @ray.remote
 class A2CAgent:
     def __init__(self, num_steps, env):
+        self.chief = False
         self.env = gym.make(env)
         self.num_steps = num_steps
         self.finished = False
@@ -28,6 +29,10 @@ class A2CAgent:
         # reset environment at the end of an episode
         if self.finished:
             self.state = self.env.reset()
+
+        # render chief
+        if self.chief:
+            self.env.render()
 
         self.state = np.reshape(self.state, [1,self.obs_space_size])
 
@@ -52,3 +57,6 @@ class A2CAgent:
             return self.memory
         else:
             return None
+
+    def set_chief(self, chief):
+        self.chief = chief

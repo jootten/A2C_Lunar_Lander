@@ -7,8 +7,8 @@ class Critic(Layer):
     
     def __init__(self):
         super(Critic, self).__init__()
-        self.fc1 = keras_layers.Dense(units=128, input_shape=[8,], activation=None)
-        self.fc2 = keras_layers.Dense(units=64, activation=None)
+        self.fc1 = keras_layers.Dense(units=128, input_shape=[8,], activation='relu', kernel_regularizer="l2")
+        self.fc2 = keras_layers.Dense(units=64, activation='relu')
         self.out = keras_layers.Dense(units=1, activation=None)
     
     def call(self, x, training=False):

@@ -15,12 +15,12 @@ def test_run(network="mlp", environment='LunarLanderContinuous-v2'):
 
     checkpoint_directory_a = f"./training_checkpoints/{network}/actor"
     checkpoint = tf.train.Checkpoint(optimizer=adam, model=actor)
-    status = checkpoint.restore(tf.train.latest_checkpoint(checkpoint_directory_a))
+    _ = checkpoint.restore(tf.train.latest_checkpoint(checkpoint_directory_a))
 
     env = gym.make(environment)
     all_returns = 0
     rec_state = [None, None]
-    for _ in range(500):    
+    for episode in range(200):    
         cum_return = 0 
         state = env.reset()
         while True:
@@ -36,9 +36,9 @@ def test_run(network="mlp", environment='LunarLanderContinuous-v2'):
             cum_return += reward
             if done:
                 break
-        #print(cum_return)
+        print(f"Total reward in episode {episode}: {cum_return}.")
         all_returns += cum_return
-    print(f"Average cumulative return after 200 episodes: {cum_return / 200}.")
+    print(f"Average cumulative return after 200 episodes: {all_returns / 200}.")
 
 def get_action_distribution(actor, state, network, recurrent_state=[None, None]):
     if network == "lstm":

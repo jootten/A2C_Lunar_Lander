@@ -17,8 +17,8 @@ class Actor(Layer):
 
         if self.type == "mlp":
             self.fc1 = keras_layers.Dense(units=128, activation='relu', kernel_regularizer="l2")
-            self.fc2 = keras_layers.Dense(units=64, activation='relu', kernel_regularizer="l2")
-            self.fc3 = keras_layers.Dense(units=32, activation='relu', kernel_regularizer="l2")
+            self.fc2 = keras_layers.Dense(units=64, activation='relu')
+            self.fc3 = keras_layers.Dense(units=32, activation='relu')
         
         self.batch_norm = keras_layers.BatchNormalization()
         
