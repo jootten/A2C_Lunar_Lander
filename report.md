@@ -106,7 +106,11 @@ Even with our simple network architecure we were able to observe a considerable 
 * modifying the network architecture of the actor to match the new action space: it now has to return two pairs of mean and variance values, each pair describing one normal distribution from which we sample the action for the main and the side engine
 * at this point we decided to implement parallel computing of episodes with multiple agents to speed up the learning (because up to this point we were not able to see any useful learning):
  * we looked at different parallelization packages and after some testing we decided to go with [Ray][Ray]
- * Ray allowed us to run multiple agents on our CPUs/GPUs and with this significantly boosting our learning
+ * Ray allowed us to run multiple agents on our CPUs/GPUs in parallel and with this significantly boosting our learning  
+ 
+With the speed-up provided by the parallelization and further fixes of minor but sometimes critical issues we were finally able to observe our agents learning useful behaviour in the LunarLander environment up to the point where the Lander actually stoped chrashing down on the moon every single time and made its first successful landings. That's one small step for the RL research, one giant leap for our team.  
+But we were not quite satisfied with the result yet. The learning process was still very slow and so we decided to add one more ingredient: Long short-term memory or LSTM for short. Adding LSTM to the actor network is said to greatly imporve its performance. Further it might enable our agents to solve other environments, like the [BipedalWalker][BiWalk], which require some kind of longer lasting memory.  
+We advanced into the last phase of our project, which mainly deals with improvements like the implementation of LSTM but also with cleaning, restructuring and polishing the code to achieve its final form.
  
 **Phase 3:**
 
@@ -132,7 +136,7 @@ Back in the init() method of the coordinator, there is one more important step t
 
 * Instantiation must be done with `Agent.remote()` instead of `Agent()` as seen in the screenshot
 * A worker process is started on a single thread of the GPU
-* A Agent object is instantiated on that worker
+* An Agent object is instantiated on that worker
 * Methods of the Agent class called on multiple Agents can execute in parallel, but must be called with `agent_Instance.function.remote()`
 * Returns of a remote function call now return the task ID, the actual results can be obtained later when needed by calling `ray.get(task_ID)`
 
@@ -186,3 +190,4 @@ possible structure in train():
 [Gym]: https://gym.openai.com/
 [LeonLect]: https://studip.uni-osnabrueck.de/sendfile.php?type=0&file_id=f0d5efee6a2faf80610f2540611efb47&file_name=IANNwTF_L12_Reinforcement_Learning.pdf
 [PFP]: http://incompleteideas.net/book/bookdraft2017nov5.pdf 
+[BiWalk]: http://gym.openai.com/envs/BipedalWalker-v2/
