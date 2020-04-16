@@ -20,7 +20,7 @@ def test_run(network="mlp", environment='LunarLanderContinuous-v2'):
     env = gym.make(environment)
     all_returns = 0
     rec_state = [None, None]
-    for episode in range(200):    
+    for episode in range(100):    
         cum_return = 0 
         state = env.reset()
         while True:
@@ -38,7 +38,7 @@ def test_run(network="mlp", environment='LunarLanderContinuous-v2'):
                 break
         print(f"Total reward in episode {episode}: {cum_return}.")
         all_returns += cum_return
-    print(f"Average cumulative return after 200 episodes: {all_returns / 200}.")
+    print(f"Average cumulative return after 200 episodes: {all_returns / 100}.")
 
 def get_action_distribution(actor, state, network, recurrent_state=[None, None]):
     if network == "lstm":
