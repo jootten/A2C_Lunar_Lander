@@ -131,7 +131,7 @@ We advanced into the last phase of our project, which mainly deals with improvem
 
 This section makes up the main part of our report. Here we will highlight and explain the important parts of our project's implementation. We are trying to present the code in the most semantic logical and intuitiv order to facilitate the comprehension. The code itself is already structured into several classes and we will always indicate which class we are currently talking about.  
 We are starting with the coordinator class because, as its name suggests, it organizes the use of every other class and also the whole procedure of the learning process. From there we will go step by step and jump into the other classes as they are coming up.  
-The instantiation of the coordinator happens in the main.py **(main.py line 21)** and the execution of its constructor initializes everything needed for successful learning. The most crucial point in this part is probably the instantiation of the two Neural Networks which build the core of the A2C method, namely the Actor and the Critic. **(coordinator.py line 42-49)** As one can see here, network related things like the loss function and the optimizers are also created at this point. But let's take the chance to go into both classes and look at the architectures of the networks.
+The instantiation of the coordinator happens in the main.py **(main.py line 25-31)** and the execution of its constructor initializes everything needed for successful learning. The most crucial point in this part is probably the instantiation of the two Neural Networks which build the core of the A2C method, namely the Actor and the Critic. **(coordinator.py line 35-42)** As one can see here, network related things like the loss function and the optimizers are also created at this point. But let's take the chance to go into both classes and look at the architectures of the networks.
 
 The Critic:
 
@@ -141,23 +141,34 @@ The Actor:
 
 ... **(screenshots of actor.py)** 
 
-Back in the init() method of the coordinator, there is one more important step to talk about. The creation of the agents which will run on the environment in a  parallel manner. **(coordinator.py line 51-52)** The instantiation of the agents exhibits an anomaly: the keyword ".remote". This is necessary, because the agent class is declared as a Ray remote class, which has the following implications when instantiated:  
+Back in the init() method of the coordinator, there is one more important step to talk about. The creation of the agents which will run on the environment in a  parallel manner. **(coordinator.py line 54-56)** The instantiation of the agents exhibits an anomaly: the keyword ".remote". This is necessary, because the agent class is declared as a Ray remote class, which has the following implications when instantiated:  
 
 * Instantiation must be done with `Agent.remote()` instead of `Agent()` as seen in the screenshot
 * A worker process is started on a single thread of the GPU
 * An Agent object is instantiated on that worker
 * Methods of the Agent class called on multiple Agents can execute in parallel, but must be called with `agent_Instance.function.remote()`
 * Returns of a remote function call now return the task ID, the actual results can be obtained later when needed by calling `ray.get(task_ID)`
+* **(talk about the chief stuff)**
+
+Besides the Ray specific specialties, the agent class still has a normal init() method in which we want to have a short glance now:
+
+**(agent.py line 9-22)**
+
+Noteworthy here is the creation of the OpenAI Gym environment in which the agent will act (screenshot line 11) and the instantiation of the agent's memory (screenshot line 22). The memory is represented as an object of our Memory class. As exspected an object of this class is responsible for saving the observations an agent makes. This includes states visited, actions taken, rewards received, returns estimated and information about whether the current episode has finished or not. We will have a look at important methods of the Memory class when we are speaking about the agents executing actions and making observations.
+
 
 The rest of the coordinator's init() just deals with the preparation of the tensorboard in order to be able to inspect the training progress.  
-Now that our coordinator is fully operational we can start the training by calling its train() method in the main.py **(main.py line 22)**   
+Now that our coordinator is fully operational we can start the training by calling its train() method in the main.py **(main.py line 25-31)**   
 This method is the heart of the coordinator and will be assisted by quite a lot of helper methods and also some other classes we did not talked about in detail yet. We will go through all of them and explain their use in the order they are needed in the train() method.  
 
 possible structure in train():
 
- * step_parallel() only mlp part    
+* **(coordinator.py line 70-73)**
 
+* head into step_parallel() only mlp part    
+ * **(coordinator.py line 128-138)**
  * agent's observe():  
+   * 
    * return the current state, which is stored in `self.state` 
    * if the previous episode was finished, reset the environment and return the initial state of the new episode instead
 
