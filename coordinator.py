@@ -54,7 +54,7 @@ class Coordinator:
         
         # instantiate multiple agents (ray actors) and set first one as chief
         self.agent_list = [A2CAgent.remote(self.num_steps, env_name) for _ in range(num_agents)]
-        self.agent_list[0].set_chief.remote(True)
+        self.agent_list[0].set_chief.remote()
 
         # Prepare Tensorboard
         current_time = datetime.now().strftime("%Y%m%d-%H%M%S")
