@@ -2,7 +2,7 @@ import tensorflow.keras.layers as keras_layers
 from tensorflow.keras.layers import Layer
 import tensorflow as tf
 
-# Value Fuction Estimator
+# State value fuction estimator used to compute the advantage
 class Critic(Layer):
     
     def __init__(self):

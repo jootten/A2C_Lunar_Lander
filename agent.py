@@ -1,8 +1,8 @@
-import os
+from memory import Memory
 import gym
 import numpy as np
 import ray
-from memory import Memory
+
 
 @ray.remote
 class A2CAgent:

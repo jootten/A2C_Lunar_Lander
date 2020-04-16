@@ -14,6 +14,7 @@ from memory import Memory
 from actor import Actor
 from critic import Critic
 
+# enables cuda implementations for recurrent networks
 physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
@@ -63,7 +64,7 @@ class Coordinator:
         self.step = 0
 
 
-    def train(self, num_updates=5000):
+    def train(self, num_updates=6000):
         # called from main
         cum_return = 0
         num_epsisodes = 0

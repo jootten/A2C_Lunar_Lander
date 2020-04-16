@@ -42,13 +42,15 @@ class Memory:
             return self.__add__(other)
 
     def compute_discounted_cum_return(self, critic):
+        # compute the discounted cumulative return after observing num_steps observations
         self.estimated_return.setflags(write=1)
         idx = (len(self.rewards) - 1)
+        # initialize the estimated return for the last observation
         if self.terminals[idx]:
             cumulative_return = 0  
         else:
             cumulative_return = critic(np.reshape(self.states[idx], [1,self.obs_space_size]))[0,0]
-        #self.estimated_return[idx][0] = cumulative_return
+        # reverse the observations and compute the gamma discounted return for each timestep
         for i in range(idx, -1, -1):
             if self.terminals[i]:    
                 cumulative_return = 0
