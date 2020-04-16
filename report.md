@@ -168,14 +168,16 @@ possible structure in train():
 * head into step_parallel() only mlp part    
  * **(coordinator.py line 128-138)**
  * agent's observe():  
-   * 
+   * **(agent.py line 24-39)**
+   * reset the agent's memory if it is the start of a new episode
    * return the current state, which is stored in `self.state` 
    * if the previous episode was finished, reset the environment and return the initial state of the new episode instead
 
- * get_action_distribution()  
+ * get_action_distribution()
+   * **(coordinator.py line 140-144)**
 
  * agent's execute()   
-   * **(line 44-48)**
+   * **(agent.py line 41-59)**
    * Perform the action given as an argument to the function and store the resulting state and reward returned by the environment, then update the internal state `self.state` and the finished flag
    * Our observations are stored by the memory object instantiated from our Memory class (memory.py). It is initialized in the agents `__init__` and posseses numpy arrays to store states, actions, rewards, estimated returns and terminal booleans denoting wether the episode is done or not **(line 10-14?)**. Observations are stored in the arrays via the index representing the timesteps **(line 16-20)**   
    
@@ -186,11 +188,12 @@ possible structure in train():
    * **(line 75-76 disc_returns + sum(memories))** We then concatenate all the made observations accross all agents.
 
 * get_mean_gradients() in line 79 of coordinator
+   * **(coordinator.py line 152-157)**
    * compute_gradients()
    * actor_loss()
    * Adding the entropy term to the actor loss has been found to improve exploration, minimizing the risk of convergence to an only locally optimal policy ([A3C paper][A3C] page 4). This adds a new hyperparameter, the entropy coefficient, which balances the amount of exploration. **(coordinator entropy() )**
    
-* apply_gradients to the networks in line 73-74  
+* apply_gradients to the networks in line 80-81
 
 * the part storing summary statistics  
 

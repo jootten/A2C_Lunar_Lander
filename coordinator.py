@@ -107,7 +107,7 @@ class Coordinator:
                 checkpoint = tf.train.Checkpoint(optimizer=self.critic_optimizer, model=self.critic)
                 checkpoint.save(file_prefix=checkpoint_prefix_c)
             num_epsisodes += sum(self.memory.terminals)
-            print(f"Update {i_update + 1} of {num_updates} finished with {self.num_agents} agents after {num_epsisodes}.")
+            print(f"Update {i_update + 1} of {num_updates} finished with {self.num_agents} agents after {num_epsisodes} episodes.")
 
 
 
@@ -139,15 +139,15 @@ class Coordinator:
 
     def get_action_distribution(self, state, recurrent_state=[None, None], update=False):
         # Get the normal distribution over the action space, determined by mu and sigma
+        if self.network == "mlp":
+            mu, sigma, _ = self.actor(state)
+            return Normal(loc=mu, scale=sigma), None
+
         if self.network == "lstm":
             if update:
                 state = state.reshape(self.num_agents, self.num_steps, self.obs_space_size)
             mu, sigma, recurrent_state = self.actor(state, initial_state=recurrent_state)
             return Normal(loc=mu, scale=sigma), recurrent_state
-        
-        if self.network == "mlp":
-            mu, sigma, _ = self.actor(state)
-            return Normal(loc=mu, scale=sigma), None
         
     def _get_mean_gradients(self):
         # Compute gradients for the actor (policy gradient), Maximize the estimated return
@@ -181,15 +181,3 @@ class Coordinator:
         logprob = self.action_dist.log_prob(self.memory.actions)
         # Advantage as baseline
         return -logprob * advantages
-
-    #def _entropy(self):
-        # get standard deviation values
-        #std = self.action_dist.scale
-        #logstd = np.log(std)
-        # use log std to calculate entropy
-        #entropy = logstd + .5 * np.log(2.0 * np.pi * np.e)
-        #entropy = tf.expand_dims(entropy,1)
-        #entropy = tf.reduce_mean(entropy)
-    #    entropy = self.action_dist.entropy()
-    #    return entropy
-
