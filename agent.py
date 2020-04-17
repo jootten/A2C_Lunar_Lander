@@ -58,5 +58,5 @@ class A2CAgent:
         else:
             return None
 
-    def set_chief(self, chief):
-        self.chief = chief
+    def set_chief(self):
+        self.chief = True
