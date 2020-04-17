@@ -11,7 +11,7 @@ tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 def test_run(network="mlp", environment='LunarLanderContinuous-v2'):
     # Initialize model and environment
     env = gym.make(environment)
-    actor = Actor(temp_env, network="mlp")
+    actor = Actor(env, network)
     adam = tf.keras.optimizers.Adam()
 
     # Load model checkpoint
@@ -20,7 +20,7 @@ def test_run(network="mlp", environment='LunarLanderContinuous-v2'):
     _ = checkpoint.restore(tf.train.latest_checkpoint(checkpoint_directory_a))
 
     all_returns = 0
-    rec_state = [None, None]
+    rec_state = None
     # Run the agent for 100 consecutive trials
     for episode in range(100):    
         cum_return = 0 
@@ -28,9 +28,14 @@ def test_run(network="mlp", environment='LunarLanderContinuous-v2'):
         while True:
             env.render()
             # Get action
-            if network == "lstm":
-                state = np.reshape(state, (1,1,8))
-                action_dist, rec_state = get_action_distribution(actor, state, network, rec_state) 
+            if network == "gru":
+                # create mask to reset the  recurrent state for finished environments
+                mask = np.ones((1, 1, env.observation_space.shape[0]))
+                input = tf.concat((state.reshape(1,1,8), mask), axis=2)
+                # Sample action from the normal distribution given by the policy
+                action_dist, rec_state = get_action_distribution(actor, input, network, recurrent_state=rec_state)
+                action = np.array(action_dist.sample())
+
             if network == "mlp":
                 state = np.reshape(state, (1,8))
                 action_dist, _ = get_action_distribution(actor, state, network)
@@ -39,14 +44,15 @@ def test_run(network="mlp", environment='LunarLanderContinuous-v2'):
             state, reward, done, _ = env.step(action)
             cum_return += reward
             if done:
+                rec_state = None
                 break
         print(f"Total reward in episode {episode}: {cum_return}.")
         all_returns += cum_return
     print(f"Average cumulative return after 200 episodes: {all_returns / 100}.")
 
 # Compute action distribution with trained actor/policy network
-def get_action_distribution(actor, state, network, recurrent_state=[None, None]):
-    if network == "lstm":
+def get_action_distribution(actor, state, network, recurrent_state=None):
+    if network == "gru":
         mu, sigma, recurrent_state = actor(state, initial_state=recurrent_state)
         return Normal(loc=mu, scale=sigma), recurrent_state
     

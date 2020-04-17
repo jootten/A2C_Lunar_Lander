@@ -1,6 +1,7 @@
 import tensorflow.keras.layers as kl
 from tensorflow.keras.layers import Layer
 import tensorflow as tf
+from gru import GRUCell
 
 # Policy/actor network
 # Estimates the parameters mu and sigma of the normal distribution
@@ -13,9 +14,11 @@ class Actor(Layer):
         self.action_space_size = env.action_space.shape[0]
         self.type = network
 
-        if self.type == "lstm":
-            self.lstm1 = kl.LSTM(32, return_sequences=True, return_state=True)
-            self.lstm2 = kl.LSTM(32, return_sequences=True, return_state=True)
+        if self.type == "gru":
+            self.cell_1 = GRUCell(input_dim=8, units=32)
+            self.cell_2 = GRUCell(input_dim=32, units=32)
+            self.cells = [self.cell_1, self.cell_2]
+            self.rnn = tf.keras.layers.RNN(self.cells, return_sequences=True, return_state=True)
 
         if self.type == "mlp":
             self.fc1 = kl.Dense(units=128, activation='relu', kernel_regularizer="l2")
@@ -27,16 +30,12 @@ class Actor(Layer):
         self.mu_out = kl.Dense(units=self.action_space_size, activation='tanh')
         self.sigma_out = kl.Dense(units=self.action_space_size, activation='softplus')
     
-    def call(self, x, initial_state=[None, None]):
+    def call(self, x, initial_state=None):
         state = None
 
-        if self.type == "lstm":
-            x, s1_h, s1_c = self.lstm1(x, initial_state=initial_state[0])
-            x = self.batch_norm(x)
-            x, s2_h, s2_c = self.lstm2(x, initial_state=initial_state[1])
-            
-            state_1 = [s1_h, s1_c]
-            state_2 = [s2_h, s2_c]
+        if self.type == "gru":
+            x, state_1, state_2 = self.rnn(x, initial_state=initial_state)
+            x, _ = tf.split(x, 2, axis=2)
             state = [state_1, state_2]
 
         if self.type == "mlp":

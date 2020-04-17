@@ -43,7 +43,8 @@ class Coordinator:
         self.critic_loss = None
 
         # instantiate variable to store recurrent states of the agents
-        self.agents_recurrent_state = [None, None]
+        self.agents_recurrent_state = None
+        self.update_recurrent_state = None
 
         # store action distribution during update
         self.action_dist = None
@@ -64,7 +65,7 @@ class Coordinator:
         self.step = 0
 
 
-    def train(self, num_updates=6000):
+    def train(self, num_updates=7000):
         # called from main
         cum_return = 0
         num_epsisodes = 0
@@ -113,17 +114,17 @@ class Coordinator:
 
 
     def step_parallel(self, t):
-        # Compute one step on all envs in parallel with lstm as policy network
-        if self.network == "lstm":
+        # Compute one step on all envs in parallel with gru as policy network
+        if self.network == "gru":
             # Observe state to compute an action for the next time step
             states, dones = zip(*(ray.get([agent.observe.remote(t) for agent in self.agent_list])))
-            if  (True in dones):    
-                mask = np.ones((self.num_agents, 32))
-                mask[dones,:] = 0
-                # mask recurrent state to reset it for finished environments
-                self.agents_recurrent_state = list(map(lambda x: list(map(lambda y: y * mask, x)), self.agents_recurrent_state))
+            # create mask to reset the  recurrent state for finished environments
+            mask = np.ones((self.num_agents, 1, self.obs_space_size))
+            if True in dones:
+                mask[dones,:,:] = 0
+            input = tf.concat((np.array(states), mask), axis=2)
             # Sample action from the normal distribution given by the policy
-            action_dist, self.agents_recurrent_state = self.get_action_distribution(np.array(states), recurrent_state=self.agents_recurrent_state)
+            action_dist, self.agents_recurrent_state = self.get_action_distribution(input, recurrent_state=self.agents_recurrent_state)
             actions = np.array(action_dist.sample())
 
         # Compute one step on all envs in parallel with mlp as policy network
@@ -138,15 +139,20 @@ class Coordinator:
         memories = ray.get([agent.execute.remote(actions[i], t) for i, agent in enumerate(self.agent_list)])
         return memories
 
-    def get_action_distribution(self, state, recurrent_state=[None, None], update=False):
+    def get_action_distribution(self, state, recurrent_state=None, update=False):
         # Get the normal distribution over the action space, determined by mu and sigma
         if self.network == "mlp":
             mu, sigma, _ = self.actor(state)
             return Normal(loc=mu, scale=sigma), None
 
-        if self.network == "lstm":
+        if self.network == "gru":
             if update:
-                state = state.reshape(self.num_agents, self.num_steps, self.obs_space_size)
+                # create mask to reset the  recurrent state for finished environments
+                mask = tf.ones(((self.num_agents * self.num_steps), self.obs_space_size))
+                mask[self.memory.terminals,:] = 0
+                state = tf.concat((state, mask), axis=1)
+                state = tf.reshape(state, (self.num_agents, self.num_steps, (self.obs_space_size * 2)))
+            # forward mask together with input to the actor
             mu, sigma, recurrent_state = self.actor(state, initial_state=recurrent_state)
             return Normal(loc=mu, scale=sigma), recurrent_state
         
@@ -161,7 +167,7 @@ class Coordinator:
         with tf.GradientTape() as tape:
             if type == 'actor':
                 # Compute the actor loss: 
-                loss = self._actor_loss() + self.action_dist.entropy() * ENTROPY_COEF
+                loss = self._actor_loss() - self.action_dist.entropy() * ENTROPY_COEF
                 #loss = tf.reduce_mean(loss, axis=0)
             else:
                 # Compute the statue value
@@ -178,7 +184,7 @@ class Coordinator:
         advantages = self.memory.estimated_return - state_v
         advantages = tf.cast(advantages, tf.float32)
         # Get log probability of the taken action
-        self.action_dist, _ = self.get_action_distribution(self.memory.states, update=True)
+        self.action_dist, self.update_recurrent_state = self.get_action_distribution(self.memory.states, update=True)
         logprob = self.action_dist.log_prob(self.memory.actions)
         # Advantage as baseline
         return -logprob * advantages

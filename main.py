@@ -8,7 +8,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--train", help="training run", action="store_true")
     parser.add_argument("--test", help="test run", action="store_true")
-    parser.add_argument("--network_type", default="mlp", help="""type of the policy network ["mlp", "lstm"]""", type=str)
+    parser.add_argument("--network_type", default="mlp", help="""type of the policy network ["mlp", "gru"]""", type=str)
     parser.add_argument("--num_agents", default=8, help="number of environments and agents running in parallel", type=int)
     parser.add_argument("--num_steps", default=32, help="number of steps on each environment for every update", type=int)
     parser.add_argument("--environment", default="LunarLanderContinuous-v2", help="gym environment type", type=str)
