@@ -148,7 +148,7 @@ class Coordinator:
         if self.network == "gru":
             if update:
                 # create mask to reset the  recurrent state for finished environments
-                mask = tf.ones(((self.num_agents * self.num_steps), self.obs_space_size))
+                mask = np.ones(((self.num_agents * self.num_steps), self.obs_space_size))
                 mask[self.memory.terminals,:] = 0
                 state = tf.concat((state, mask), axis=1)
                 state = tf.reshape(state, (self.num_agents, self.num_steps, (self.obs_space_size * 2)))
