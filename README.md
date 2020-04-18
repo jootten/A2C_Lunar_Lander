@@ -2,7 +2,7 @@
 
 <img src="report_screenshots/arcade_logo.png" width="380">
 
-### General informations
+### General information
 
 **For the course**:
 

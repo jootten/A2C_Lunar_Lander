@@ -7,7 +7,7 @@ output:
 
 ![](report_screenshots/arcade_logo.png){ width=380px }
 
-### General informations
+### General information
 
 **For the course**:
 
