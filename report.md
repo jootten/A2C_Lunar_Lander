@@ -7,7 +7,7 @@ output:
 
 ![](report_screenshots/arcade_logo.png){ width=380px }
 
-### General informations
+### General information
 
 **For the course**:
 
@@ -15,7 +15,7 @@ Implementing Artificial Neural Networks (ANNs) with Tensorflow (winter term 2019
 
 **Topic**:
 
-A2C for continuous action spaces applied on the [LunarLanderContinuous][LLC] environment from Gym OpenAI
+A2C for continuous action spaces applied on the [LunarLanderContinuous][LLC] environment from OpenAI Gym  
 
 **Participants**:
 
@@ -210,7 +210,7 @@ Now it is time for the coordinator to utilize these memories to make the agents 
 
 ![*Figure 13: coordinator.py train*](report_screenshots/coordinator.py_train.png)
 
-We do this by first computing the discounted cumulative return **(Figure 13, Line 76)**. As described in the theoretical background, our goal is to maximize the cumulative discounted return at each timestep. For each memory object, we store the cumulative return in the attribute `self.estimated_return`. This is done by iterating over the reversed list of rewards **(Figure 14, Line 54)** and summing up all rewards, but discounting future rewards more heavily **(Figure 14, Line 57)**, e.g. $G_1 = R_{t=1} + \gamma \cdot R_{t=2} + \gamma^2 \cdot R_{t=3} + ...$. Our function does this in an unintuitive manner, but it becomes apparent if one would go through this with an example: Looking at a reward list with only 3 entries at the end of an episode: Our `cumulative_return` gets initialized with 0. Our `estimated_return[3]` for timestep 3 is $R_3$ (`self.rewards[3]`). Our `cumulative_return` is now $R_3$. For timestep 2 the estimated return is $R_2 + \gamma \cdot R_3$. Now finally for timestep 1 the discounted cumulative return $G_1$ (our `estimated_return[1]`) is $R_1 + \gamma \cdot (R_2 + \gamma \cdot R_3) = R_1 + \gamma \cdot R_2 + \gamma^2 \cdot R_3$ if we multiply the $\gamma$ into the brackets. This is exactly what we wanted and we hope that the functionality of this method is now more clear. It is important to notice that this estimated return only depends on rewards of following states and not of the ones before.  
+We do this by first computing the discounted cumulative return **(Figure 13 Line, 76)**. As described in the theoretical background, our goal is to maximize the cumulative discounted return at each timestep. We had defined it as $G_t = \sum_t^{\infty}{\gamma^{t} r_t}$. For each memory object, we store $G_t$ in the attribute `self.estimated_return`. This is calculated by iterating over the reversed list of rewards **(Figure 14, Line 54)** and summing up all rewards, but discounting future rewards more heavily **(Figure 14, Line 57)**, e.g. $G_1 = R_{t=1} + \gamma \cdot R_{t=2} + \gamma^2 \cdot R_{t=3} + ...$. Our function does this in an unintuitive manner, but it becomes apparent if one would go through this with an example: Looking at a reward list with only 3 entries at the end of an episode: Our `cumulative_return` gets initialized with 0. Our `estimated_return[3]` for timestep 3 is $R_3$ (`self.rewards[3]`). Our `cumulative_return` is now $R_3$. For timestep 2 the estimated return is $R_2 + \gamma \cdot R_3$. Now finally for timestep 1 the discounted cumulative return $G_1$ (our `estimated_return[1]`) is $R_1 + \gamma \cdot (R_2 + \gamma \cdot R_3) = R_1 + \gamma \cdot R_2 + \gamma^2 \cdot R_3$ if we multiply the $\gamma$ into the brackets. This is exactly what we wanted and we hope that the functionality of this method is now more clear. It is important to notice that this estimated return only depends on rewards of following states and not of the ones before.  
 
 Back in the coordinator, concatenating all the made observations accross all agents can then be done using the sum function **(Figure 13, Line 77)**, as we have adjusted the memory class's `__add__` behavior method, i.e. what happens when adding two memory objects together, namely that their observations are concatenated.
 
@@ -234,7 +234,15 @@ Using our previously mentioned `get_action_distribution` function (**Figure 10**
 Our actor loss therefore consists of the log probability and the advantage, which is used as a baseline for the log probability here to reduce the variance of the policy gradients ([A3C paper][A3C] page 3). These gradients must still be computed from the actor loss, which we do using the tensorflow gradient tape **(Figure 16, Line 177)**.  
 Having finished computing the policy gradients, we now move on to the critic gradients **(Figure 15, Line 163)**. For those we calculate the Mean Squared Error between the estimated returns and the state values **(Figure 16, Line 175)** 
 
-* apply_gradients to the networks in, Line 80-81
+Our actor loss therefore consists of the log probability and the advantage, which is used as a baseline for the log probability here to reduce the variance of the policy gradients ([A3C paper][A3C] page 3). These gradients must still be computed from the actor loss, which we do using the tensorflow gradient tape **(Figure 16, Line 177)**.  
+Having finished computing the policy gradients, we now move on to the critic gradients **(Figure 15, Line 163)**. For those we calculate the Mean Squared Error between the discounted cumulative returns **(Figure 14)** and the state values, which are again obtained from pushing the observed states through the critic network **(Figure 16, Line 172-175)**. As we did with the actor loss, gradient of the critic loss is now computed with the help of the gradient tape **(Figure 16, Line 177)** and the policy and critic gradients are now returned to the coordinator **(see below: Figure 13, Line 80)**.
+
+![*Figure 13: coordinator.py train*](report_screenshots/coordinator.py_train.png)
+
+Finally, we can let the Adam optimizers travel through the loss spaces roughly oriented towards the direction of greatest descent given by our gradients, i.e. applying the gradients to update our models **(Figure 13, Line 81-82)**.
+
+Our A2C algorithm has now run through one iteration and performed a single coordinated update of our two networks. All agents will now start their next set of steps in the environment with the same network parameters, which is the before mentioned specialty of the A2C algorithm compared to A3C.
+
 
 ### 4.1. An alternative actor: Recurrent policy network
 As an alternative neural network for the policy of the actor we implemented an recurrent one, in order to utilize the advantages of the propagation of hidden states. By doing so, we relax the *Markov property* of the Markov desicion process we assume because information about previous states gets taken into account to compute the distribution over the actions. We set up the hypothesis that the information about the impact of previously taken actions on the state of the environment positively influences training speed and task performance.
@@ -275,14 +283,15 @@ The hidden states returned by the actor (**Figure 4**) are saved between the ste
 
 ![*Figure 22: GRU Cell implementation: forward pass*](report_screenshots/gru.py_call.png)
 
-
-**how to run training and testing? checkpoints**
+*** 5. How to run training and testing 
+Having read our implementation, we hope you are now eager to try it out!  
+We have included our trained models, which were saved using the `tf.train.Checkpoint` function. These can be tested by calling `python3 main.py --test`, which will automatically load the trained models and render the environment. We have also added further arguments to the command line parser, which can be viewed using `python3 main.py --help`. Most notably the policy network type can be changed here (`--network_type "mlp"` or `--network_type "gru"`). The number of agents for training can be changed as well, e.g. `--num_agents 12`. To train the model, use `--train`.
  
-### 5. Results
+### 6. Results
 
-### 6. Conclusion
+### 7. Conclusion
 
-### 7. References
+### 8. References
 ...
 
 [LLC]: https://gym.openai.com/envs/LunarLanderContinuous-v2/
