@@ -28,8 +28,12 @@ Paul Jänsch
 1. Introduction/Motivation
 2. Theoretical Background
 3. Project development log
-4. The model and the experiment
-5. Visualization and results
+4. The model and the experiment  
+ 4.1 An alternative actor: Recurrent policy network
+5. How to run training and testing
+6. Results
+7. Conclusion
+8. References
 
 ### 1. Introduction/Motivation
 
@@ -245,9 +249,9 @@ Our A2C algorithm has now run through one iteration and performed a single coord
 
 
 ### 4.1. An alternative actor: Recurrent policy network
-As an alternative neural network for the policy of the actor we implemented an recurrent one, in order to utilize the advantages of the propagation of hidden states. By doing so, we relax the *Markov property* of the Markov desicion process we assume because information about previous states gets taken into account to compute the distribution over the actions. We set up the hypothesis that the information about the impact of previously taken actions on the state of the environment positively influences training speed and task performance.
+As an alternative neural network for the policy of the actor we implemented a recurrent one in order to utilize the advantages of the propagation of hidden states. By doing so, we relax the *Markov property* of the Markov desicion process we assume because information about previous states gets taken into account to compute the distribution over the actions. We set up the hypothesis that the information about the impact of previously taken actions on the state of the environment positively influences training speed and task performance.
 
-To set up a recurrent network we used *gated recurrent units* (GRU). These recurrent cells can be seen as variation of the *Long short-term memory* (LSTM) cell. Similarly an GRU cell utilizes gates, namely an update gate $z_t$ and a reset gate $r_t$ to avoid vanishing gradients and enable the cell to keep information in the hidden state h_t over an arbitrary amount of time. 
+To set up a recurrent network we used *gated recurrent units* (GRU). These recurrent cells can be seen as a variation of the *Long short-term memory* (LSTM) cell. Similarly a GRU cell utilizes gates, namely an update gate $z_t$ and a reset gate $r_t$ to avoid vanishing gradients and enable the cell to keep information in the hidden state $h_t$ over an arbitrary amount of time. 
 
 $$
 \begin{aligned}
@@ -256,7 +260,7 @@ r_t = \sigma(w_r x_t + u_r h_{t-1} + b_r)
 \end{aligned}
 $$
 
-with $w$ depicting weight matrices for the input $x_t$, $u$ the weigth matrices for the previous hidden state $h_{t-1}$ and $b$ the bias. But in contrast to the LSTM it uses only one hidden state $h_t$ instead of an additional cell state. The calculation of the hidden state/output of the cell integrates the previously computed gates.
+with $w$ depicting weight matrices for the input $x_t$, $u$ the weight matrices for the previous hidden state $h_{t-1}$, $b$ the bias and $\sigma$ the sigmoid function. But in contrast to the LSTM it uses only one hidden state $h_t$ instead of an additional cell state. The calculation of the hidden state/output of the cell integrates the previously computed gates.
 
 $$
 \begin{aligned}
@@ -269,23 +273,22 @@ The complete operations happening in one GRU cell are depicted in **Figure 18** 
 
 ![*Figure 18: GRU Cell*](report_screenshots/gru_cell.png)
 
-Notation:
 ![*Figure 19: GRU Cell: Notations*](report_screenshots/gru_cell_notation.png)
 
-In the implementation of an recurrent neural network for the policy, we faced some serious issues. The main challenge was imposed by the handling of the hidden states during the computation of the action distribution during the collection of observations and in the update of the network. It is difficult is to reset the hidden state, when the next timestep included in one batch belongs to a new episode. That is the reason why we chose to implement a custom GRU Cell with the Keras API, in order to provide a mask for the hidden state, which resets it at terminal timesteps. This mask just contains zeros for each timestep being terminal and ones for every other state (**Figure 20, Line 121 - 125**). 
+In the implementation of a recurrent neural network for the policy we faced some serious issues. The main challenge was imposed by the handling of the hidden states during the collection of observations and in the update of the network. It is difficult to reset the hidden state when the next timestep included in one batch belongs to a new episode. That is the reason why we chose to implement a custom GRU Cell with the Keras API: In order to provide a mask for the hidden state, which resets it at terminal timesteps. This mask just contains zeros for each terminal state and ones for every other state (**Figure 20, Line 121 - 125**). 
 
 ![*Figure 20: GRU Cell: executing a parallel step on the environemts*](report_screenshots/coordinator.py_step_parallel_gru.png)
 
-The hidden states returned by the actor (**Figure 4**) are saved between the steps of the agent on the environment and between the updates. During the update, the shape of the batch is three dimensional. The first dimension represents the agents, the second dimension the timesteps and the last the state vector (**Figure 21**). We found no solution to reset the hidden states of terminal timesteps during the forward pass of multiple timesteps at once without implementing a custom GRU. The recurrent policy returns mu and sigma of the action distribution in the same manner as the feed forward policy.
+The hidden states returned by the actor (**Figure 4**) are saved between steps of the agent on the environment and between updates. During the update, the shape of the batch is three dimensional. The first dimension represents the agents, the second dimension the timesteps and the last the state vector (**Figure 21**). We found no solution to reset the hidden states of terminal timesteps during the forward pass of multiple timesteps at once without implementing a custom GRU. The recurrent policy returns mu and sigma of the action distribution in the same manner as the feed forward policy.
 
 ![*Figure 21: GRU Cell: getting the action distribution*](report_screenshots/coordinator.py_get_action_dist_gru.png)
 
- We provide the mask together with the input for the recurrent cell and change its shape corresponding to shape of the hidden state of the cell defined by the amount of units  (**Figure 22, Line 73 - 77**). After that, we compute the values of the gates and the current hidden state $h_t$. Then the mask gets forwarded together with the hidden state to the next cell, the hidden state for the next timestep in one batch gets forwarded without the mask because it is provided by the input (**Figure 22, Line 79 - 88**).
+We provide the mask together with the input for the recurrent cell and change its shape corresponding to the shape of the hidden state of the cell defined by the amount of units  (**Figure 22, Line 73 - 77**). After that, we compute the values of the gates and the current hidden state $h_t$. Then the mask gets forwarded together with the hidden state to the next cell. The hidden state for the next timestep in one batch gets forwarded without the mask because it is provided by the input (**Figure 22, Line 79 - 88**).
 
 
 ![*Figure 22: GRU Cell implementation: forward pass*](report_screenshots/gru.py_call.png)
 
-*** 5. How to run training and testing 
+### 5. How to run training and testing 
 Having read our implementation, we hope you are now eager to try it out!  
 We have included our trained models, which were saved using the `tf.train.Checkpoint` function. These can be tested by calling `python3 main.py --test`, which will automatically load the trained models and render the environment. We have also added further arguments to the command line parser, which can be viewed using `python3 main.py --help`. Most notably the policy network type can be changed here (`--network_type "mlp"` or `--network_type "gru"`). The number of agents for training can be changed as well, e.g. `--num_agents 12`. To train the model, use `--train`.
  
