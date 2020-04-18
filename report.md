@@ -214,17 +214,21 @@ We do this by first computing the discounted cummulative return **(Figure 13 lin
    
 ![*Figure 14: memory.py compute_discounted_cum_return*](report_screenshots/memory.py_compute_return.png)
 
-**TODO:**
+The memory object of the coordinator now contains the collective memory of all agents and their discounted returns. These are needed to compute the actor loss and critic loss, which we want to minimize, so we compute their gradients. This is coordinated by the `_get_mean_gradients()` function **(Figure 13 line 80, Figure 15)**. Since we have two networks, two gradients are computed: The policy gradients minimize the actor loss, therefore maximizing the estimated return **(Figure 15 line 161)** and the critic gradients minimize the critic loss, which will minimize the Mean Squared Error for the state value function **(Figure 15 line 163)**. 
 
-The memory object of the coordinator now contains the collective memory of all agents and their discounted returns. These are needed to compute the actor loss and critic loss, which we want to minimize, so we compute their gradients. This happens in the `_get_mean_gradients()` function **(Figure 13 line 80, Figure 15)**  
+![*Figure 15: coordinator.py _get_mean_gradients*](report_screenshots/coordinator.py_get_gradients.png)  
 
-![*Figure 15: coordinator.py _get_mean_gradients*](report_screenshots/coordinator.py_get_gradients.png)
+Let's look at how we calculate the two losses. Firstly, we see that the final actor loss **(Figure 16 line 170)** is adjusted by an entropy term. Adding the entropy term to the actor loss has been found to improve exploration, which minimizes the risk of convergence to an only locally optimal policy ([A3C paper][A3C] page 4). This adds a new hyperparameter, the entropy coefficient (`ENTROPY_COEF`), which balances the amount of exploration. 
 
-   * **(coordinator.py line 152-157)**
-   * compute_gradients()
-   * actor_loss()
-   * Adding the entropy term to the actor loss has been found to improve exploration, minimizing the risk of convergence to an only locally optimal policy ([A3C paper][A3C] page 4). This adds a new hyperparameter, the entropy coefficient, which balances the amount of exploration. **(coordinator entropy() )**
-   
+![*Figure 16: coordinator.py _compute_gradients*](report_screenshots/coordinator.py_compute_gradients.png)  
+
+The unmodified actor loss is returned from our `_actor_loss` method, which first estimates the state value by passing all states to the critic **(Figure 3)**. In the Lunar Lander environment, a state is a vector of 8 values, denoting different aspects within the environment, e.g. the coordinates of the vessel. So our critic takes this state vector as an input and outputs the state value. Applying L2-regularization has improved our critic loss during training **(Figure 3 line 10)**.  
+The state values are now used to get an estimate of the advantage **(Figure 17 line 183)**.
+But our actor loss also consists of a second part. As described in the theoretical background, our actor gradients are updated via $d\theta = d\theta + A_w\nabla_\theta \ln{\pi_{\theta}}$. We have the advantage $A_w$, now we need to compute the log policy probability $\ln{\pi_\theta}$. Here's how:   
+Using our previously mentioned `get_action_distribution` function (**Figure 10**), we recompute the normal distributions that we sampled our performed actions in each respective state from **(Figure 17 line 186)**.  Inputting the recorded action back into the normal distribution's log probability density function returns us the relative log probability $\ln{\pi_\theta}$ of sampling that action **(Figure 17 line 187)**. 
+
+![*Figure 17: coorndinator.py _actor_loss*](report_screenshots/coordinator.py_actor_loss.png)
+
 * apply_gradients to the networks in line 80-81
 
 * the part storing summary statistics  
