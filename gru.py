@@ -16,58 +16,58 @@ class GRUCell(tf.keras.layers.Layer):
         self.w_z = self.add_weight(
                             name="w_update",
                             shape=(self.input_dim, self.units),
-                            initializer='uniform',
+                            initializer='random_normal',
                             regularizer="l2"
                             )
         self.u_z = self.add_weight(
                             name="u_update",
                             shape=(self.units, self.units),
-                            initializer='uniform',
+                            initializer='random_normal',
                             regularizer="l2"
                             )
         self.b_z = self.add_weight(
                             name="b_update",
                             shape=(self.units,),
                             initializer='zeros',
-                            regularizer="l2"                       
+                            regularizer=None                       
                             )
         # Reset gate
         self.w_r = self.add_weight(
                             name="w_reset",
                             shape=(self.input_dim, self.units),
-                            initializer='uniform',
+                            initializer='random_normal',
                             regularizer="l2"
                             )
         self.u_r = self.add_weight(
                             name="u_reset",
                             shape=(self.units, self.units),
-                            initializer='uniform',
-                            regularizer="l2"
+                            initializer='random_normal',
+                            regularizer=None
                             )
         self.b_r = self.add_weight(
                             name="b_reset",
                             shape=(self.units,),
                             initializer='zeros',
-                            regularizer="l2"                        
+                            regularizer=None                       
                             )
         # Memory content
         self.w_h = self.add_weight(
                             name="w_memory",
                             shape=(self.input_dim, self.units),
-                            initializer='uniform',
+                            initializer='random_normal',
                             regularizer="l2"
                             )
         self.u_h = self.add_weight(
                             name="u_memory",
                             shape=(self.units, self.units),
-                            initializer='uniform',
+                            initializer='random_normal',
                             regularizer="l2"                            
                             )
         self.b_h = self.add_weight(
                             name="b_memory",
                             shape=(self.units,),
                             initializer='zeros',
-                            regularizer="l2"                        
+                            regularizer=None                        
                             )
             
     def call(self, inputs, hidden_states):

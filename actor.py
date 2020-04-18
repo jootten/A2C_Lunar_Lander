@@ -15,8 +15,9 @@ class Actor(Layer):
         self.type = network
 
         if self.type == "gru":
-            self.cell_1 = GRUCell(input_dim=8, units=32)
-            self.cell_2 = GRUCell(input_dim=32, units=32)
+            self.cell_1 = GRUCell(input_dim=8, units=64)
+            self.cell_2 = GRUCell(input_dim=64, units=32)
+            self.fc_gru = kl.Dense(units=32)
             self.cells = [self.cell_1, self.cell_2]
             self.rnn = tf.keras.layers.RNN(self.cells, return_sequences=True, return_state=True)
 
@@ -29,7 +30,7 @@ class Actor(Layer):
         
         self.mu_out = kl.Dense(units=self.action_space_size, activation='tanh')
         self.sigma_out = kl.Dense(units=self.action_space_size, activation='softplus')
-    
+        
     def call(self, x, initial_state=None):
         state = None
 
@@ -37,6 +38,7 @@ class Actor(Layer):
             x, state_1, state_2 = self.rnn(x, initial_state=initial_state)
             x, _ = tf.split(x, 2, axis=2)
             state = [state_1, state_2]
+            x = self.fc_gru(x)
 
         if self.type == "mlp":
             x = self.fc1(x)

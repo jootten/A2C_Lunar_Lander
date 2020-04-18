@@ -21,7 +21,7 @@ tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
 os.system("rm -rf ./logs/")
 
-ENTROPY_COEF = 0.001 # used to balance exploration
+ENTROPY_COEF = 0.01 # used to balance exploration
 
 class Coordinator:
     def __init__(self, num_agents=8, env_name='LunarLanderContinuous-v2', network='mlp', num_steps=32):
@@ -36,7 +36,7 @@ class Coordinator:
         # Initialize model, loss and optimizer
         self.actor = Actor(temp_env, network)
         self.critic = Critic()
-        self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate=0.00005)
+        self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate=0.0001)
         self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate=0.01)
         self.mse = tf.keras.losses.MeanSquaredError()
         self.actor_loss = None
@@ -65,7 +65,7 @@ class Coordinator:
         self.step = 0
 
 
-    def train(self, num_updates=7000):
+    def train(self, num_updates=10000):
         # called from main
         cum_return = 0
         num_epsisodes = 0

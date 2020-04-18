@@ -12,11 +12,10 @@ def test_run(network="mlp", environment='LunarLanderContinuous-v2'):
     # Initialize model and environment
     env = gym.make(environment)
     actor = Actor(env, network)
-    adam = tf.keras.optimizers.Adam()
 
     # Load model checkpoint
     checkpoint_directory_a = f"./training_checkpoints/{network}/actor"
-    checkpoint = tf.train.Checkpoint(optimizer=adam, model=actor)
+    checkpoint = tf.train.Checkpoint(model=actor)
     _ = checkpoint.restore(tf.train.latest_checkpoint(checkpoint_directory_a))
 
     all_returns = 0
