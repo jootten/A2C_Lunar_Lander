@@ -1,7 +1,5 @@
 ## Project report
 
-![](report_screenshots/arcade_logo.png){ width=380px }
-
 <img src="report_screenshots/arcade_logo.png" width="380">
 
 ### General informations
