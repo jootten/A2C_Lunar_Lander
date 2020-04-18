@@ -73,8 +73,8 @@ class GRUCell(tf.keras.layers.Layer):
     def call(self, inputs, hidden_states):
         # Mask the hidden state to reset it at timesteps with finished environments
         input, mask = tf.split(inputs, 2, axis=1)
-        out_mask = tf.matmul(mask, tf.zeros((mask.shape[-1], self.units)))
-        h_masked = hidden_states[0] * out_mask
+        mask = tf.matmul(mask, tf.ones((mask.shape[-1], self.units))) / self.input_dim
+        h_masked = hidden_states[0] * mask
 
         # Compute update and reset gates
         z_t = tf.nn.sigmoid(tf.matmul(input, self.w_z) + tf.matmul(h_masked, self.u_z) + self.b_z)
@@ -84,5 +84,5 @@ class GRUCell(tf.keras.layers.Layer):
         h_t = tf.nn.tanh(tf.matmul(input, self.w_h) + tf.matmul((r_t * h_masked), self.u_h) + self.b_h)
         h_t_seq = (z_t * h_t) + ((1 - z_t) * h_masked)
 
-        h_t_forward = tf.concat((h_t_seq, out_mask), axis=1)
+        h_t_forward = tf.concat((h_t_seq, mask), axis=1)
         return h_t_forward, [h_t_seq]

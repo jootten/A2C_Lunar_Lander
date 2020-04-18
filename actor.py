@@ -12,10 +12,11 @@ class Actor(Layer):
         super(Actor, self).__init__()
         
         self.action_space_size = env.action_space.shape[0]
+        self.observation_space_size = env.observation_space.shape[0]
         self.type = network
 
         if self.type == "gru":
-            self.cell_1 = GRUCell(input_dim=8, units=64)
+            self.cell_1 = GRUCell(input_dim=self.observation_space_size, units=64)
             self.cell_2 = GRUCell(input_dim=64, units=32)
             self.fc_gru = kl.Dense(units=32)
             self.cells = [self.cell_1, self.cell_2]
@@ -48,4 +49,4 @@ class Actor(Layer):
         mu = self.mu_out(x)
         sigma = self.sigma_out(x)     
         
-        return tf.reshape(mu, [-1, 2]), tf.reshape(sigma, [-1, 2]), state
+        return tf.reshape(mu, [-1, self.action_space_size]), tf.reshape(sigma, [-1, self.action_space_size]), state
