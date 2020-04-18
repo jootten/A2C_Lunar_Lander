@@ -169,7 +169,7 @@ class Coordinator:
                 # Compute the actor loss: 
                 loss = self._actor_loss() - self.action_dist.entropy() * ENTROPY_COEF
             else:
-                # Compute the statue value
+                # Compute the state value
                 state_v = self.critic(self.memory.states, training=True)
                 # Compute the critic loss
                 loss = self.mse(self.memory.estimated_return, state_v, sample_weight=0.5)
