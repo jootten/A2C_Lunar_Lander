@@ -15,7 +15,7 @@ Implementing Artificial Neural Networks (ANNs) with Tensorflow (winter term 2019
 
 **Topic**:
 
-A2C for continuous action spaces applied on the [LunarLanderContinuous][LLC] environment from Gym OpenAI
+A2C for continuous action spaces applied on the [LunarLanderContinuous][LLC] environment from OpenAI Gym  
 
 **Participants**:
 
