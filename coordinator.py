@@ -168,7 +168,6 @@ class Coordinator:
             if type == 'actor':
                 # Compute the actor loss: 
                 loss = self._actor_loss() - self.action_dist.entropy() * ENTROPY_COEF
-                #loss = tf.reduce_mean(loss, axis=0)
             else:
                 # Compute the statue value
                 state_v = self.critic(self.memory.states, training=True)
