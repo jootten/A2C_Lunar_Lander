@@ -142,7 +142,7 @@ class Coordinator:
     def get_action_distribution(self, state, recurrent_state=None, update=False):
         # Get the normal distribution over the action space, determined by mu and sigma
         if self.network == "mlp":
-            mu, sigma, _ = self.actor(state)
+            mu, sigma, _ = self.actor(state.squeeze())
             return Normal(loc=mu, scale=sigma), None
 
         if self.network == "gru":
