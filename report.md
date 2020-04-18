@@ -268,6 +268,8 @@ $$
 The complete operations happening in one GRU cell are depicted in **Figure 18** and the notations in **Figure 19**. For a more detailed review of the GRU view the work by [Chung et al. [2014]][GRU].
 
 ![*Figure 18: GRU Cell*](report_screenshots/gru_cell.png)
+
+Notation:
 ![*Figure 19: GRU Cell: Notations*](report_screenshots/gru_cell_notation.png)
 
 In the implementation of an recurrent neural network for the policy, we faced some serious issues. The main challenge was imposed by the handling of the hidden states during the computation of the action distribution during the collection of observations and in the update of the network. It is difficult is to reset the hidden state, when the next timestep included in one batch belongs to a new episode. That is the reason why we chose to implement a custom GRU Cell with the Keras API, in order to provide a mask for the hidden state, which resets it at terminal timesteps. This mask just contains zeros for each timestep being terminal and ones for every other state (**Figure 20, Line 121 - 125**). 
