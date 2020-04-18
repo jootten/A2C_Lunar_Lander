@@ -210,33 +210,43 @@ Now it is time for the coordinator to utilize these memories to make the agents 
 
 ![*Figure 13: coordinator.py train*](report_screenshots/coordinator.py_train.png)
 
-We do this by first computing the discounted cummulative return **(Figure 13 line 76)**. As described in the theoretical background, our goal is to maximize the cumulative discounted return at each timestep. For each memory object, we store it in the attribute `self.estimated_return` **(Figure 14)**. Concatenating all the made observations accross all agents can then be done using the sum function **(Figure 13 line 77)**, as we have adjusted the memory class's `__add__` behavior method, i.e. what happens when adding two memory objects together, namely that their observations are concatenated.
+We do this by first computing the discounted cumulative return **(Figure 13 line 76)**. As described in the theoretical background, our goal is to maximize the cumulative discounted return at each timestep. For each memory object, we store this in the attribute `self.estimated_return` **(Figure 14)**.  Concatenating all the made observations accross all agents can then be done using the sum function **(Figure 13 line 77)**, as we have adjusted the memory class's `__add__` behavior method, i.e. what happens when adding two memory objects together, namely that their observations are concatenated.
+
+*
+index set to end, because list of obs is reversed
+if last state is terminal
+else use estimate from critic
+for: obs von hinten durchgehen
+   reward + last cum return discounted by gamma
+   estimated return only depends on rewards of following states not of the ones before
    
+   reward1 + 0
+   reward2 + gamma * reward1
+   reward3 + gamma * (reward2 + gamma * reward1) = reward3 + gamma * reward2 + gamma^2 * reward1
+*  
 ![*Figure 14: memory.py compute_discounted_cum_return*](report_screenshots/memory.py_compute_return.png)
 
 The memory object of the coordinator now contains the collective memory of all agents and their discounted returns. These are needed to compute the actor loss and critic loss, which we want to minimize, so we compute their gradients. This is coordinated by the `_get_mean_gradients()` function **(Figure 13 line 80, Figure 15)**. Since we have two networks, two gradients are computed: The policy gradients minimize the actor loss, therefore maximizing the estimated return **(Figure 15 line 161)** and the critic gradients minimize the critic loss, which will minimize the Mean Squared Error for the state value function **(Figure 15 line 163)**. 
 
-![*Figure 15: coordinator.py _get_mean_gradients*](report_screenshots/coordinator.py_get_gradients.png)  
+![*Figure 15: coordinator.py get_mean_gradients*](report_screenshots/coordinator.py_get_gradients.png)  
 
 Let's look at how we calculate the two losses. Firstly, we see that the final actor loss **(Figure 16 line 170)** is adjusted by an entropy term. Adding the entropy term to the actor loss has been found to improve exploration, which minimizes the risk of convergence to an only locally optimal policy ([A3C paper][A3C] page 4). This adds a new hyperparameter, the entropy coefficient (`ENTROPY_COEF`), which balances the amount of exploration. 
 
-![*Figure 16: coordinator.py _compute_gradients*](report_screenshots/coordinator.py_compute_gradients.png)  
+![*Figure 16: coordinator.py compute_gradients*](report_screenshots/coordinator.py_compute_gradients.png)  
 
 The unmodified actor loss is returned from our `_actor_loss` method, which first estimates the state value by passing all states to the critic **(Figure 3)**. In the Lunar Lander environment, a state is a vector of 8 values, denoting different aspects within the environment, e.g. the coordinates of the vessel. So our critic takes this state vector as an input and outputs the state value. Applying L2-regularization has improved our critic loss during training **(Figure 3 line 10)**.  
 The state values are now used to get an estimate of the advantage **(Figure 17 line 183)**.
 But our actor loss also consists of a second part. As described in the theoretical background, our actor gradients are updated via $d\theta = d\theta + A_w\nabla_\theta \ln{\pi_{\theta}}$. We have the advantage $A_w$, now we need to compute the log policy probability $\ln{\pi_\theta}$. Here's how:   
 Using our previously mentioned `get_action_distribution` function (**Figure 10**), we recompute the normal distributions that we sampled our performed actions in each respective state from **(Figure 17 line 186)**.  Inputting the recorded action back into the normal distribution's log probability density function returns us the relative log probability $\ln{\pi_\theta}$ of sampling that action **(Figure 17 line 187)**. 
 
-![*Figure 17: coorndinator.py _actor_loss*](report_screenshots/coordinator.py_actor_loss.png)
+![*Figure 17: coordinator.py actor_loss*](report_screenshots/coordinator.py_actor_loss.png)
+
+Our actor loss therefore consists of the log probability and the advantage, which is used as a baseline for the log probability here to reduce the variance of the policy gradients ([A3C paper][A3C] page 3). These gradients must still be computed from the actor loss, which we do using the tensorflow gradient tape **(Figure 16 line 177)**.  
+Having finished computing the policy gradients, we now move on to the critic gradients **(Figure 15 line 163)**. For those we calculate the Mean Squared Error between the estimated returns and the state values **(Figure 16 line 175)** 
 
 * apply_gradients to the networks in line 80-81
 
-* the part storing summary statistics  
-
-* the part with checkpoints
-
-
-**how to run training and testing?**
+**how to run training and testing? checkpoints**
  
 ### Visualization and results
 
