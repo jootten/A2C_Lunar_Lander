@@ -210,20 +210,10 @@ Now it is time for the coordinator to utilize these memories to make the agents 
 
 ![*Figure 13: coordinator.py train*](report_screenshots/coordinator.py_train.png)
 
-We do this by first computing the discounted cumulative return **(Figure 13 line 76)**. As described in the theoretical background, our goal is to maximize the cumulative discounted return at each timestep. For each memory object, we store this in the attribute `self.estimated_return` **(Figure 14)**.  Concatenating all the made observations accross all agents can then be done using the sum function **(Figure 13 line 77)**, as we have adjusted the memory class's `__add__` behavior method, i.e. what happens when adding two memory objects together, namely that their observations are concatenated.
+We do this by first computing the discounted cumulative return **(Figure 13 line 76)**. As described in the theoretical background, our goal is to maximize the cumulative discounted return at each timestep. For each memory object, we store the cumulative return in the attribute `self.estimated_return`. This is done by iterating over the reversed list of rewards **(Figure 14 line 54)** and summing up all rewards, but discounting future rewards more heavily **(Figure 14 line 57)**, e.g. $G_1 = R_{t=1} + \gamma \cdot R_{t=2} + \gamma^2 \cdot R_{t=3} + ...$. Our function does this in an unintuitive manner, but it becomes apparent if one would go through this with an example: Looking at a reward list with only 3 entries at the end of an episode: Our `cumulative_return` gets initialized with 0. Our `estimated_return[3]` for timestep 3 is $R_3$ (`self.rewards[3]`). Our `cumulative_return` is now $R_3$. For timestep 2 the estimated return is $R_2 + \gamma \cdot R_3$. Now finally for timestep 1 the discounted cumulative return $G_1$ (our `estimated_return[1]`) is $R_1 + \gamma \cdot (R_2 + \gamma \cdot R_3) = R_1 + \gamma \cdot R_2 + \gamma^2 \cdot R_3$ if we multiply the $\gamma$ into the brackets. This is exactly what we wanted and we hope that the functionality of this method is now more clear. It is important to notice that this estimated return only depends on rewards of following states and not of the ones before.  
 
-*
-index set to end, because list of obs is reversed
-if last state is terminal
-else use estimate from critic
-for: obs von hinten durchgehen
-   reward + last cum return discounted by gamma
-   estimated return only depends on rewards of following states not of the ones before
-   
-   reward1 + 0
-   reward2 + gamma * reward1
-   reward3 + gamma * (reward2 + gamma * reward1) = reward3 + gamma * reward2 + gamma^2 * reward1
-*  
+Back in the coordinator, concatenating all the made observations accross all agents can then be done using the sum function **(Figure 13 line 77)**, as we have adjusted the memory class's `__add__` behavior method, i.e. what happens when adding two memory objects together, namely that their observations are concatenated.
+
 ![*Figure 14: memory.py compute_discounted_cum_return*](report_screenshots/memory.py_compute_return.png)
 
 The memory object of the coordinator now contains the collective memory of all agents and their discounted returns. These are needed to compute the actor loss and critic loss, which we want to minimize, so we compute their gradients. This is coordinated by the `_get_mean_gradients()` function **(Figure 13 line 80, Figure 15)**. Since we have two networks, two gradients are computed: The policy gradients minimize the actor loss, therefore maximizing the estimated return **(Figure 15 line 161)** and the critic gradients minimize the critic loss, which will minimize the Mean Squared Error for the state value function **(Figure 15 line 163)**. 
