@@ -1,14 +1,13 @@
-# ANN_Tensorflow
+## Project report
 
-TODO:
+![](report_screenshots/arcade_logo.png){ width=380px }
 
-1. openAI env aufsetzen
+### General informations
 
-2. 2 Networks (policy und state-value)
+**For the course**:
 
-3. run env for one episode, store everything in memory
+Implementing Artificial Neural Networks (ANNs) with Tensorflow (winter term 2019/20)
 
-4. if enough stuff in memory:
+**Topic**:
 
-  * calc estimated return
-  * accumulate gradients over all oberservations
+A2C for continuous action spaces applied on the [LunarLanderContinuous][LLC] environment from Gym OpenAI
