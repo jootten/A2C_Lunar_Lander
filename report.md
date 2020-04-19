@@ -298,10 +298,26 @@ Note that this will create new checkpoints throughout the training, meaning that
 
 * mlp
    * solved environment: show cumulative return
+   
+   ![*Figure 23: mlp cumulative return*](report_screenshots/results/cumulative_return.png)
+   
    * actor/critic loss: critic dependent on policy so curves look similar, goes against zero, but osszilates around 0
+   ![*Figure 24: mlp policy loss*](report_screenshots/results/policy_main.png)  
+   
+   ![*Figure 25: mlp critic loss*](report_screenshots/results/critic_loss.png)
+   
 * gru
    * solved: cum_return
+   
+   ![*Figure 26: gru cumulative return*](report_screenshots/results/cumulative_return_gru.png)
+   
    * compare to mlp: more stable, learns faster, lower variance
+   
+   ![*Figure 27: gru policy loss*](report_screenshots/results/policy_main_gru.png)  
+   
+   ![*Figure 28: gru critic loss*](report_screenshots/results/critic_loss_gru.png)
+
+
 
 ### 7. References
 
