@@ -297,11 +297,12 @@ Having read our implementation, we hope you are now eager to try it out!
 We have included our trained models, which were saved using the `tf.train.Checkpoint` function. These can be tested by calling `python3 main.py --test`, which will automatically load the trained models and render the environment. We have also added further arguments to the command line parser, which can be viewed using `python3 main.py --help`. Most notably the policy network type can be changed here (`--network_type "mlp"` or `--network_type "gru"`). The number of agents for training can be changed as well, e.g. `--num_agents 12`. To train the model, use `--train`.
 Note that this will create new checkpoints throughout the training, meaning that when running `--test` afterwards it will load the new checkpoints and not our trained model anymore.
 
+### 6. Results
+
 In this section we will present the results of our experiment. In particular, we will highlight the performance of the actor with different policy networks.
 
 On the leaderboards for the OpenAI Gym environments, LunarLanderContinuous-v2 is defined as being "solved" when getting an average reward of 200 over 100 consecutive trials. Both our MLP and GRU networks were able to achieve this. To test this we built a function tracking the reward for each trial into our `main.py --test`. After 100 trials, the program will end and output the average reward over those trials. This has been around 240 for our MLP network after having trained for 4684 episodes (summing the number of episodes each agent performed). Our GRU network has achieved a slightly lower average reward of 229, but it has reached this level of performance after having trained for only 2472 episodes.
 
-### 6. Results
 ### 6.1 MLP
 
 Now we will take a closer look at the performance of the MLP policy during a successful training run.
