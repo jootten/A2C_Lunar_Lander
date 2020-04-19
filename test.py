@@ -5,8 +5,6 @@ import tensorflow as tf
 import os
 from datetime import datetime
 import numpy as np
-physical_devices = tf.config.list_physical_devices('GPU')
-tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
 def test_run(network="mlp", environment='LunarLanderContinuous-v2'):
     # Initialize model and environment
