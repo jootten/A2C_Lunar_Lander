@@ -29,7 +29,8 @@ Paul Jänsch
 2. Theoretical Background
 3. Project development log
 4. The model and the experiment  
- 4.1 An alternative actor: Recurrent policy network
+ 4.1 Original approach with MLP policy network  
+ 4.2 An alternative actor: Recurrent policy network
 5. How to run training and testing
 6. Results  
  6.1 MLP  
@@ -43,7 +44,7 @@ As a final project of this course, one possible task was to identify an interest
 Inspired by the [lecture about Deep Reinforcement Learning][LeonLect] (DLR) held by Leon Schmid we wanted to take the final project as an opportunity to gather some hands-on experience in this fascinating area. So Reinforcement Learning it is. But where to start? We were looking for something which offers a nice tradeoff between accessibility, challenge and chance of success. The [Gym environments][Gym] provided by OpenAI seemed to do just that. Most of them are set up and ready to run within a minute and with them, there is no need to worry about how to access observations or perform actions. One can simply focus on implementing the wanted algorithm.  
 Speaking of which, from all the classic DRL techniques we knew so far, the Synchronous Advantage Actor-Critic algorithm (short A2C) seemed most appropriate for the extent of the project. Challenging but doable in a few weeks. This left us with two remaining questions to answer before we could start our project.  
 First, which environment exactly should our learning algorithm try to master using A2C? Since there are better solutions than A2C for environments with discrete action spaces, Leon recommended us to go with the [LunarLanderContinuous][LLC] environment.  
-And second, which A2C related papers provide us with the necessary theoretical background and also practical inspiration on how to tackle the implementation? The answer to this question we want to give in the next section about background knowledge.
+And second, which A2C related papers provide us with the necessary theoretical background and also practical inspiration on how to tackle the implementation? An answer to this question we would like to prostpone to later sections. Especially the next section about our theoretical background will show on which knowledge our project is built and from where it emerges. Later sections about the practical implementation also contain references to important resources.
 
 ### 2. Theoretical Background
 
@@ -123,14 +124,14 @@ Even with our simple network architecture, we were able to observe a considerabl
  * Ray allowed us to run multiple agents on our CPUs/GPUs in parallel and with this significantly boosting our learning  
  
 With the speed-up provided by the parallelization and further fixes of minor but sometimes critical issues, we were finally able to observe our agents learning useful behaviour in the LunarLander environment up to the point where the Lander actually stopped crashing down on the moon every single time and made its first successful landings. That's one small step for the RL research, one giant leap for our team.  
-But we were not quite satisfied with the result yet. The learning process was still very slow and so we decided to add one more ingredient: Long short-term memory or GRU for short. Adding GRU to the actor network is said to greatly improve its performance. Further, it might enable our agents to solve other environments, like the [BipedalWalker][BiWalk], which require some kind of longer-lasting memory.  
-We advanced into the last phase of our project, which mainly deals with improvements like the implementation of GRU but also with cleaning, restructuring and polishing the code to achieve its final form.
+But we were not quite satisfied with the result yet. The learning process was still very slow and so we decided to add one more ingredient: Long short-term memory or LSTM for short. Adding LSTM to the actor network is said to greatly improve its performance. Further, it might enable our agents to solve other environments, like the [BipedalWalker][BiWalk], which require some kind of longer-lasting memory.  
+We advanced into the last phase of our project, which mainly deals with improvements like the implementation of LSTM but also with cleaning, restructuring and polishing the code to achieve its final form.
  
 **Phase 3:**
 
-* GRU implementation:
+* LSTM implementation:
  * adding pre-build LSTM-Layers by Keras to the actor network
- * expanding the parameter list of the actor's constructor such that one can choose whether the network should use the newly added GRU layers or the previously used Dense layers
+ * expanding the parameter list of the actor's constructor such that one can choose whether the network should use the newly added LSTM layers or the previously used Dense layers
  * the model does not train because states do not get reset in the forward pass during one update, training collapses after reaching a particular threshold at the cumulative return
  * exchanging Keras LSTM-Layers by custom GRU Cells and implement state resetting through masks passed with the input
  * the model trains
@@ -144,7 +145,9 @@ We advanced into the last phase of our project, which mainly deals with improvem
  
 ### 4. The model and the experiment
 
-This section makes up the main part of our report. Here we will highlight and explain the important parts of our project's implementation. We are trying to present the code in the most semantic logical and intuitive order to facilitate comprehension. The code itself is already structured into several classes and we will always indicate which class we are currently talking about.  
+This section makes up the main part of our report. Here we will highlight and explain the important parts of our project's implementation. We are trying to present the code in the most semantic logical and intuitive order to facilitate comprehension. The code itself is already structured into several classes and we will always indicate which class we are currently talking about. 
+
+### 4.1 Original approach with MLP policy network
 We are starting with the coordinator class because, as its name suggests, it organizes the use of every other class and also the whole procedure of the learning process. From there we will go step by step and jump into the other classes as they are coming up.  
 
 ![*Figure 1: main.py*](report_screenshots/main.py_coord_init.png)
@@ -226,7 +229,7 @@ Back in the coordinator, concatenating all the made observations across all agen
 
 ![*Figure 14: memory.py compute_discounted_cum_return*](report_screenshots/memory.py_compute_return.png)
 
-The memory object of the coordinator now contains the collective memory of all agents and their discounted returns. These are needed to compute the actor loss and critic loss, which we want to minimize, so we compute their gradients. This is coordinated by the `_get_mean_gradients()` function **(Figure 13, Line 80, Figure 15)**. Since we have two networks, two gradients are computed: The policy gradients maximize the actor loss, therefore maximizing the estimated return **(Figure 15, Line 161)**. This might be unconventional since the name "loss" suggests that it should be minimized, but since it is the derivative of the reward function, we want to maximize it. Since the term contains a log probability it will in fact converge to 0, since the log of probability values (which are between 0 and 1) is always $\leq 0$. In addition, the advantage term ($A_t^w = G_t -V_t^w$) should also converge to 0 since the estimated return $G_t$ is approximated by our critic (state value function) and we want our critic's estimate to be as close as possible to the actual return.
+The memory object of the coordinator now contains the collective memory of all agents and their discounted returns. These are needed to compute the actor loss and critic loss, which we want to minimize, so we compute their gradients. This is coordinated by the `_get_mean_gradients()` function **(Figure 13, Line 80, Figure 15)**. Since we have two networks, two gradients are computed: The policy gradients maximize the actor loss, therefore maximizing the estimated return **(Figure 15, Line 161)**. This might be unconventional since the name "loss" suggests that it should be minimized, but as it is the derivative of the reward function, we want to maximize it. The term contains a log probability and it will in fact converge to 0, because the logarithm of probability values (which are between 0 and 1) is always $\leq 0$. In addition, the advantage term ($A_t^w = G_t -V_t^w$) should also converge to 0 since the estimated return $G_t$ is approximated by our critic (state value function) and we want our critic's estimate to be as close as possible to the actual return.
 
 The critic gradients minimize the critic loss, which will minimize the Mean Squared Error for the state value function **(Figure 15, Line 163)**. 
 
@@ -253,10 +256,10 @@ Finally, we can let the Adam optimizers travel through the loss spaces roughly o
 Our A2C algorithm has now run through one iteration and performed a single coordinated update of our two networks. All agents will now start their next set of steps in the environment with the same network parameters, which is the before mentioned specialty of the A2C algorithm compared to A3C.
 
 
-### 4.1. An alternative actor: Recurrent policy network
+### 4.2 An alternative actor: Recurrent policy network
 As an alternative neural network for the policy of the actor, we implemented a recurrent one in order to utilize the advantages of the propagation of hidden states. By doing so, we relax the *Markov property* of the Markov decision process we assume because information about previous states gets taken into account to compute the distribution over the actions. We set up the hypothesis that the information about the impact of previously taken actions on the state of the environment positively influences training speed and task performance.
 
-To set up a recurrent network we used *gated recurrent units* (GRU). These recurrent cells can be seen as a variation of the *Long short-term memory* (GRU) cell. Similarly, a GRU cell utilizes gates, namely an update gate $z_t$ and a reset gate $r_t$ to avoid vanishing gradients and enable the cell to keep information in the hidden state $h_t$ over an arbitrary amount of time. 
+To set up a recurrent network we used *gated recurrent units* (GRU). These recurrent cells can be seen as a variation of the *Long short-term memory* (LSTM) cell. Similarly, a GRU cell utilizes gates, namely an update gate $z_t$ and a reset gate $r_t$ to avoid vanishing gradients and enable the cell to keep information in the hidden state $h_t$ over an arbitrary amount of time. 
 
 $$
 \begin{aligned}
@@ -265,7 +268,7 @@ r_t = \sigma(w_r x_t + u_r h_{t-1} + b_r)
 \end{aligned}
 $$
 
-with $w$ depicting weight matrices for the input $x_t$, $u$ the weight matrices for the previous hidden state $h_{t-1}$, $b$ the bias and $\sigma$ the sigmoid function. But in contrast to the GRU, it uses only one hidden state $h_t$ instead of an additional cell state. The calculation of the hidden state/output of the cell integrates the previously computed gates.
+with $w$ depicting weight matrices for the input $x_t$, $u$ the weight matrices for the previous hidden state $h_{t-1}$, $b$ the bias and $\sigma$ the sigmoid function. But in contrast to the LSTM, it uses only one hidden state $h_t$ instead of an additional cell state. The calculation of the hidden state/output of the cell integrates the previously computed gates.
 
 $$
 \begin{aligned}
