@@ -119,15 +119,18 @@ Even with our simple network architecure we were able to observe a considerable 
  * Ray allowed us to run multiple agents on our CPUs/GPUs in parallel and with this significantly boosting our learning  
  
 With the speed-up provided by the parallelization and further fixes of minor but sometimes critical issues we were finally able to observe our agents learning useful behaviour in the LunarLander environment up to the point where the Lander actually stoped chrashing down on the moon every single time and made its first successful landings. That's one small step for the RL research, one giant leap for our team.  
-But we were not quite satisfied with the result yet. The learning process was still very slow and so we decided to add one more ingredient: Long short-term memory or LSTM for short. Adding LSTM to the actor network is said to greatly improve its performance. Further it might enable our agents to solve other environments, like the [BipedalWalker][BiWalk], which require some kind of longer lasting memory.  
-We advanced into the last phase of our project, which mainly deals with improvements like the implementation of LSTM but also with cleaning, restructuring and polishing the code to achieve its final form.
+But we were not quite satisfied with the result yet. The learning process was still very slow and so we decided to add one more ingredient: Long short-term memory or GRU for short. Adding GRU to the actor network is said to greatly improve its performance. Further it might enable our agents to solve other environments, like the [BipedalWalker][BiWalk], which require some kind of longer lasting memory.  
+We advanced into the last phase of our project, which mainly deals with improvements like the implementation of GRU but also with cleaning, restructuring and polishing the code to achieve its final form.
  
 **Phase 3:**
 
-* LSTM implementation:
- * adding the pre-build LSTM-Layers by Keras to the Actor network
- * expanding the parameter list of the actor's constructor such that one can choose whether the network should use the newly added LSTM layers or the previously used Dense layers
- * **(describe problems of LSTM here and write that we will not remove the LSTM code beacuse it is a nice approach and the default learning can still be done with the Dense Layers)**
+* GRU implementation:
+ * adding pre-build LSTM-Layers by Keras to the Actor network
+ * expanding the parameter list of the actor's constructor such that one can choose whether the network should use the newly added GRU layers or the previously used Dense layers
+ * model does not train because states do not get resetted in the forward pass during one update, training collapses after reaching a particular threshold at the cumulative return
+ * exchanging Keras LSTM-Layers by custom GRU Cells and implement state resetting through masks passed with the input
+ * the model trains
+ * set up checkpointing for custom layers
 * have code infer parameters from environment
 * adding an ArgumentParser to the main.py to allow for different settings to be used when calling the main.py (test/training run, type of actor network, number of agents used, type of environment)
 * cleaning the code:
@@ -252,7 +255,7 @@ Our A2C algorithm has now run through one iteration and performed a single coord
 ### 4.1. An alternative actor: Recurrent policy network
 As an alternative neural network for the policy of the actor we implemented a recurrent one in order to utilize the advantages of the propagation of hidden states. By doing so, we relax the *Markov property* of the Markov desicion process we assume because information about previous states gets taken into account to compute the distribution over the actions. We set up the hypothesis that the information about the impact of previously taken actions on the state of the environment positively influences training speed and task performance.
 
-To set up a recurrent network we used *gated recurrent units* (GRU). These recurrent cells can be seen as a variation of the *Long short-term memory* (LSTM) cell. Similarly a GRU cell utilizes gates, namely an update gate $z_t$ and a reset gate $r_t$ to avoid vanishing gradients and enable the cell to keep information in the hidden state $h_t$ over an arbitrary amount of time. 
+To set up a recurrent network we used *gated recurrent units* (GRU). These recurrent cells can be seen as a variation of the *Long short-term memory* (GRU) cell. Similarly a GRU cell utilizes gates, namely an update gate $z_t$ and a reset gate $r_t$ to avoid vanishing gradients and enable the cell to keep information in the hidden state $h_t$ over an arbitrary amount of time. 
 
 $$
 \begin{aligned}
@@ -261,7 +264,7 @@ r_t = \sigma(w_r x_t + u_r h_{t-1} + b_r)
 \end{aligned}
 $$
 
-with $w$ depicting weight matrices for the input $x_t$, $u$ the weight matrices for the previous hidden state $h_{t-1}$, $b$ the bias and $\sigma$ the sigmoid function. But in contrast to the LSTM it uses only one hidden state $h_t$ instead of an additional cell state. The calculation of the hidden state/output of the cell integrates the previously computed gates.
+with $w$ depicting weight matrices for the input $x_t$, $u$ the weight matrices for the previous hidden state $h_{t-1}$, $b$ the bias and $\sigma$ the sigmoid function. But in contrast to the GRU it uses only one hidden state $h_t$ instead of an additional cell state. The calculation of the hidden state/output of the cell integrates the previously computed gates.
 
 $$
 \begin{aligned}
@@ -294,19 +297,35 @@ Having read our implementation, we hope you are now eager to try it out!
 We have included our trained models, which were saved using the `tf.train.Checkpoint` function. These can be tested by calling `python3 main.py --test`, which will automatically load the trained models and render the environment. We have also added further arguments to the command line parser, which can be viewed using `python3 main.py --help`. Most notably the policy network type can be changed here (`--network_type "mlp"` or `--network_type "gru"`). The number of agents for training can be changed as well, e.g. `--num_agents 12`. To train the model, use `--train`.
 Note that this will create new checkpoints throughout the training, meaning that when running `--test` afterwards it will load the new checkpoints and not our trained model anymore.
 
-### 6. Results and discussion
+In this section we will present the results of our experiment. In particular, we will highlight the performance of the actor with different policy networks.
 
-* mlp
-   * solved environment: show cumulative return
+On the leaderboards for the OpenAI Gym environments, LunarLanderContinuous-v2 is defined as being "solved" when getting an average reward of 200 over 100 consecutive trials. Both our MLP and GRU networks were able to achieve this. To test this we built a function tracking the reward for each trial into our `main.py --test`. After 100 trials, the program will end and output the average reward over those trials. This has been around 240 for our MLP network after having trained for 4684 episodes (summing the number of episodes each agent performed). Our GRU network has achieved a slightly lower average reward of 229, but it has reached this level of performance after having trained for only 2472 episodes.
+
+### 6. Results
+### 6.1 MLP
+
+Now we will take a closer look at the performance of the MLP policy during a successful training run.
+
+In **Figure 23** the cumulative return of one agent is plotted against the number of steps taken in parallel after each episode. In the beginning of the training run the variability and the number of datapoints is quite high. This higher data point density happens because the agent crashes the Lunar Lander after a small number of timesteps, whereas later on, when performance has improved, the Lunar Lander will more slowly descend to the surface of the moon, resulting in fewer data points per timesteps. With even greater performance, the agent learns to balance the tradeoff between safe landing and fuel consumption, which results in a negative reward. Thus, the agent tries to land safely with as little fuel as possible, resulting again in a quicker descent and therefore increasing the number of datapoints per steps again. Between 200 and 300 the mean cumulative return converges, after about 120,000 timesteps it stops increasing notably and at roughly 200,000 steps the policy starts to overfit.
+
+   ![*Figure 23: mlp cumulative return*](report_screenshots/results/cumulative_return_png.png)  
    
-   ![*Figure 23: mlp cumulative return*](report_screenshots/results/cumulative_return.png)
+The actor loss (**Figure 24, 25**) given by $\mathbb{E}_{\pi}[A_{w}^{\pi} \ln{\pi_{\theta}(a|s)}]$ oscillates around 0. While the log probability $\ln{\pi_{\theta}(a|s)}$ can only take negative values, the advantage  $A_{w}^{\pi} =  G_t - V^w_t$ can also be positive. The mean of the advantage is similarly around zero, due to the critic being incentivised to bring the advantage, i.e. difference between cumulative return and the critic’s estimate for this return close to zero. 
+The log probability converges to zero because the actor tries to take actions with maximal probability, i.e. $\ln({\pi_{\theta}(a|s) = 1})=0$.
+
+   ![*Figure 24: mlp policy loss (main engine)*](report_screenshots/results/policy_main_mlp.png)  
+     
+   ![*Figure 25: mlp policy loss (side engine)*](report_screenshots/results/policy_side_mlp.png)
+
+
+
+Similarly, the critic loss (**Figure 26**) converges to zero as per usual when using Mean Squared Error as the loss function. Of interest here is that the return estimate depends on the policy. That is why the variability of the loss is that high, since the policy steadily changes so to does the value that the critic tries to estimate. So it is only possible for the critic loss to converge near zero when the policy converges and the actions performed in each state are similar.
+
+   ![*Figure 26: mlp critic loss*](report_screenshots/results/critic_loss_mlp.png)
    
-   * actor/critic loss: critic dependent on policy so curves look similar, goes against zero, but osszilates around 0
-   ![*Figure 24: mlp policy loss*](report_screenshots/results/policy_main.png)  
-   
-   ![*Figure 25: mlp critic loss*](report_screenshots/results/critic_loss.png)
-   
-* gru
+
+### 6.2 GRU
+
    * solved: cum_return
    
    ![*Figure 26: gru cumulative return*](report_screenshots/results/cumulative_return_gru.png)
