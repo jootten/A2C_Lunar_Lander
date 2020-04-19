@@ -150,7 +150,7 @@ The instantiation of the coordinator happens in the main.py **(Figure 1)** and t
 
 ![*Figure 2: coordinator.py init*](report_screenshots/coordinator.py_network_init.png)
 
-As one can see here, network related things like the loss function and the optimizers are also created at this point. But let's take the chance to go into both classes and look at the architectures of the networks **(Figure 3 & 4)**.
+As one can see here, network-related things like the loss function and the optimizers are also created at this point. But let's take the chance to go into both classes and look at the architectures of the networks **(Figure 3 & 4)**.
 
 The Critic:
 
@@ -165,7 +165,7 @@ Back in the `__init()__` method of the coordinator, there is one more important 
 
 ![*Figure 5: coordinator.py agent instantiations*](report_screenshots/coordinator.py_agent_inst.png)
 
-The instantiation of the agents exhibits an anomaly: the keyword `.remote`. This is necessary, because the agent class is declared as a Ray remote class, which has the following implications when instantiated:  
+The instantiation of the agents exhibits an anomaly: the keyword `.remote`. This is necessary because the agent class is declared as a Ray remote class, which has the following implications when instantiated:  
 
 * Instantiation must be done with `Agent.remote()` instead of `Agent()` as seen in the screenshot
 * A worker process is started on a single thread of the CPU
@@ -192,7 +192,7 @@ First, we advance the environments a number of timesteps equal to our hyperparam
 
 ![*Figure 8: coordinator.py step_parallel*](report_screenshots/coordinator.py_step_parallel.png)
 
-Observing the current states of the environments of multiple agents can be done in parallel by calling the `agent.observe()` function on all agents **(Figure 8, Line 132)**. Being a remote function, our list comprehension will return a list of task IDs and not the actual states, therefore we must call `ray.get()` to obtain them. Taking a look at the `observe()` function **(Figure 9)** we notice that if we are at the start of a new update, it will reset the agents memory, since we only want to take observations made in the current update cycle into account for the current network update **(Figure 9, Line 26-27)**. We will elaborate on the memory class in the coming section. For now, all we want is the current state, which is stored in the `self.state` attribute of the agent. If the previous episode was finished the environment will be reset and the attribute will instead contain the initial state of the new episode **(Figure 9, Line 30-31)**.
+Observing the current states of the environments of multiple agents can be done in parallel by calling the `agent.observe()` function on all agents **(Figure 8, Line 132)**. Being a remote function, our list comprehension will return a list of task IDs and not the actual states, therefore we must call `ray.get()` to obtain them. Taking a look at the `observe()` function **(Figure 9)** we notice that if we are at the start of a new update, it will reset the agent's memory since we only want to take observations made in the current update cycle into account for the current network update **(Figure 9, Line 26-27)**. We will elaborate on the memory class in the coming section. For now, all we want is the current state, which is stored in the `self.state` attribute of the agent. If the previous episode was finished the environment will be reset and the attribute will instead contain the initial state of the new episode **(Figure 9, Line 30-31)**.
 
 ![*Figure 9: agent.py observe*](report_screenshots/agent.py_observe.png)
 
@@ -200,30 +200,30 @@ Returning the current state of every agent to the coordinator, we are now ready 
 
 ![*Figure 10: coordinator.py get_action_distribution*](report_screenshots/coordinator.py_get_action_dist.png)
 
-At this point the reasons for our architectural choices for the actor network become apparent: The tanh of the mu output layer **(Figure 4, Line 27)** keeps the center of our normal distributions, i.e. the average of our sampled values within [-1, 1], which is useful since this is exactly the action space. Similarly for the sigma output layer **(Figure 4, Line 28)**, a softplus activation ensures that the mathematical restrictions of the standard deviation are upheld, namely $\sigma \ge 0$.  
+At this point the reasons for our architectural choices for the actor network become apparent: The tanh of the mu output layer **(Figure 4, Line 27)** keeps the center of our normal distributions, i.e. the average of our sampled values within [-1, 1], which is useful since this is exactly the action space. Similarly, for the sigma output layer **(Figure 4, Line 28)**, a softplus activation ensures that the mathematical restrictions of the standard deviation are upheld, namely $\sigma \ge 0$.  
 
-Lastly, to complete our step in the environment, we execute the computed actions **(Figure 8, Line 138)**. A deep dive into the agent's execute function is required before we return the agent's memories to the coordinator. That is, because we have to form the agent's memories first. Let us take a look how this is done.
+Lastly, to complete our step in the environment, we execute the computed actions **(Figure 8, Line 138)**. A deep dive into the agent's execute function is required before we return the agent's memories to the coordinator. That is because we have to form the agent's memories first. Let us take a look at how this is done.
 
 ![*Figure 11: agent.py execute*](report_screenshots/agent.py_execute.png)
 
 The agent performs the action given on the environment and stores the resulting state, reward and done flag returned by the environment, then updates the internal state `self.state` and the finished flag **(Figure 11, Line 50-53)**.  
-His observations are stored by the memory object instantiated from our Memory class (memory.py). It is initialized in the agents `__init__` as seen before **(Figure 6, Line 22)** and posseses numpy arrays to store states, actions, rewards, estimated returns and terminal booleans denoting whether a terminal state is reached. The agents memory starts of empty **(Figure 12, Line 10-15)**. Observations can be stored in the arrays via the index representing the timesteps **(Figure 12, Line 17-22)**   
+His observations are stored by the memory object instantiated from our Memory class (memory.py). It is initialized in the agents `__init__` as seen before **(Figure 6, Line 22)** and possesses numpy arrays to store states, actions, rewards, estimated returns and terminal booleans denoting whether a terminal state is reached. The agent's memory starts of empty **(Figure 12, Line 10-15)**. Observations can be stored in the arrays via the index representing the timesteps **(Figure 12, Line 17-22)**.   
    
    
 ![*Figure 12: memory.py store*](report_screenshots/memory.py_init_store.png)
    
-Now that the memory of the agents are filled with the exciting experiences of one timestep, they are eager to return them to the coordinator. But we have taught them well, so that they will only return them to the coordinator when the required `num_steps` is reached **(Figure 11, Line 56-59)**. Until then they repeat the observe and execute routine and only afterwards collectively return a list containing every agent's memory object to the coordinator.
+Now that the memories of the agents are filled with the exciting experiences of one timestep, they are eager to return them to the coordinator. But we have taught them well, so that they will only return them to the coordinator when the required `num_steps` is reached **(Figure 11, Line 56-59)**. Until then they repeat the observe and execute routine and only afterwards collectively return a list containing every agent's memory object to the coordinator.
 Now it is time for the coordinator to utilize these memories to make the agents better.
 
 ![*Figure 13: coordinator.py train*](report_screenshots/coordinator.py_train.png)
 
 We do this by first computing the discounted cumulative return **(Figure 13 Line, 76)**. As described in the theoretical background, our goal is to maximize the cumulative discounted return at each timestep. We had defined it as $G_t = \sum_t^{\infty}{\gamma^{t} r_t}$. For each memory object, we store $G_t$ in the attribute `self.estimated_return`. This is calculated by iterating over the reversed list of rewards **(Figure 14, Line 54)** and summing up all rewards, but discounting future rewards more heavily **(Figure 14, Line 57)**, e.g. $G_1 = R_{t=1} + \gamma \cdot R_{t=2} + \gamma^2 \cdot R_{t=3} + ...$. Our function does this in an unintuitive manner, but it becomes apparent if one would go through this with an example: Looking at a reward list with only 3 entries at the end of an episode: Our `cumulative_return` gets initialized with 0. Our `estimated_return[3]` for timestep 3 is $R_3$ (`self.rewards[3]`). Our `cumulative_return` is now $R_3$. For timestep 2 the estimated return is $R_2 + \gamma \cdot R_3$. Now finally for timestep 1 the discounted cumulative return $G_1$ (our `estimated_return[1]`) is $R_1 + \gamma \cdot (R_2 + \gamma \cdot R_3) = R_1 + \gamma \cdot R_2 + \gamma^2 \cdot R_3$ if we multiply the $\gamma$ into the brackets. This is exactly what we wanted and we hope that the functionality of this method is now more clear. It is important to notice that this estimated return only depends on rewards of following states and not of the ones before.  
 
-Back in the coordinator, concatenating all the made observations accross all agents can then be done using the sum function **(Figure 13, Line 77)**, as we have adjusted the memory class's `__add__` behavior method, i.e. what happens when adding two memory objects together, namely that their observations are concatenated.
+Back in the coordinator, concatenating all the made observations across all agents can then be done using the sum function **(Figure 13, Line 77)**, as we have adjusted the memory class's `__add__` behavior method, i.e. what happens when adding two memory objects together, namely that their observations are concatenated.
 
 ![*Figure 14: memory.py compute_discounted_cum_return*](report_screenshots/memory.py_compute_return.png)
 
-The memory object of the coordinator now contains the collective memory of all agents and their discounted returns. These are needed to compute the actor loss and critic loss, which we want to minimize, so we compute their gradients. This is coordinated by the `_get_mean_gradients()` function **(Figure 13, Line 80, Figure 15)**. Since we have two networks, two gradients are computed: The policy gradients maximize the actor loss, therefore maximizing the estimated return **(Figure 15, Line 161)**. This might be unconventional, since the name "loss" suggests that it should be minimized, but since it is the derivative of the reward function, we want to maximize it. Since the term contains a log probability it will in fact converge to 0, since the log of probability values (which are between 0 and 1) is always $\leq 0$. In addition, the advantage term ($A_t^w = G_t -V_t^w$) should also converge to 0 since the estimated return $G_t$ is approximated by our critic (state value function) and we want our critic's estimate to be as close as possible to the actual return.
+The memory object of the coordinator now contains the collective memory of all agents and their discounted returns. These are needed to compute the actor loss and critic loss, which we want to minimize, so we compute their gradients. This is coordinated by the `_get_mean_gradients()` function **(Figure 13, Line 80, Figure 15)**. Since we have two networks, two gradients are computed: The policy gradients maximize the actor loss, therefore maximizing the estimated return **(Figure 15, Line 161)**. This might be unconventional since the name "loss" suggests that it should be minimized, but since it is the derivative of the reward function, we want to maximize it. Since the term contains a log probability it will in fact converge to 0, since the log of probability values (which are between 0 and 1) is always $\leq 0$. In addition, the advantage term ($A_t^w = G_t -V_t^w$) should also converge to 0 since the estimated return $G_t$ is approximated by our critic (state value function) and we want our critic's estimate to be as close as possible to the actual return.
 
 The critic gradients minimize the critic loss, which will minimize the Mean Squared Error for the state value function **(Figure 15, Line 163)**. 
 
@@ -240,11 +240,8 @@ Using our previously mentioned `get_action_distribution` function (**Figure 10**
 
 ![*Figure 17: coordinator.py actor_loss*](report_screenshots/coordinator.py_actor_loss.png)
 
-Our actor loss therefore consists of the log probability and the advantage, which is used as a baseline for the log probability here to reduce the variance of the policy gradients ([A3C paper][A3C] page 3). These gradients must still be computed from the actor loss, which we do using the tensorflow gradient tape **(Figure 16, Line 177)**.  
-Having finished computing the policy gradients, we now move on to the critic gradients **(Figure 15, Line 163)**. For those we calculate the Mean Squared Error between the estimated returns and the state values **(Figure 16, Line 175)** 
-
-Our actor loss therefore consists of the log probability and the advantage, which is used as a baseline for the log probability here to reduce the variance of the policy gradients ([A3C paper][A3C] page 3). These gradients must still be computed from the actor loss, which we do using the tensorflow gradient tape **(Figure 16, Line 177)**.  
-Having finished computing the policy gradients, we now move on to the critic gradients **(Figure 15, Line 163)**. For those we calculate the Mean Squared Error between the discounted cumulative returns **(Figure 14)** and the state values, which are again obtained from pushing the observed states through the critic network **(Figure 16, Line 172-175)**. As we did with the actor loss, gradient of the critic loss is now computed with the help of the gradient tape **(Figure 16, Line 177)** and the policy and critic gradients are now returned to the coordinator **(see below: Figure 13, Line 80)**.
+Our actor loss therefore consists of the log probability and the advantage, which is used as a baseline for the log probability here to reduce the variance of the policy gradients ([A3C paper][A3C] page 3). These gradients must still be computed from the actor loss, which we do by using the tensorflow gradient tape **(Figure 16, Line 177)**.  
+Having finished computing the policy gradients, we now move on to the critic gradients **(Figure 15, Line 163)**. For those, we calculate the Mean Squared Error between the discounted cumulative returns **(Figure 14)** and the state values, which are again obtained from pushing the observed states through the critic network **(Figure 16, Line 172-175)**. As we did with the actor loss, gradient of the critic loss is now computed with the help of the gradient tape **(Figure 16, Line 177)** and the policy and critic gradients are now returned to the coordinator **(see below: Figure 13, Line 80)**.
 
 ![*Figure 13: coordinator.py train*](report_screenshots/coordinator.py_train.png)
 
@@ -254,9 +251,9 @@ Our A2C algorithm has now run through one iteration and performed a single coord
 
 
 ### 4.1. An alternative actor: Recurrent policy network
-As an alternative neural network for the policy of the actor we implemented a recurrent one in order to utilize the advantages of the propagation of hidden states. By doing so, we relax the *Markov property* of the Markov desicion process we assume because information about previous states gets taken into account to compute the distribution over the actions. We set up the hypothesis that the information about the impact of previously taken actions on the state of the environment positively influences training speed and task performance.
+As an alternative neural network for the policy of the actor, we implemented a recurrent one in order to utilize the advantages of the propagation of hidden states. By doing so, we relax the *Markov property* of the Markov decision process we assume because information about previous states gets taken into account to compute the distribution over the actions. We set up the hypothesis that the information about the impact of previously taken actions on the state of the environment positively influences training speed and task performance.
 
-To set up a recurrent network we used *gated recurrent units* (GRU). These recurrent cells can be seen as a variation of the *Long short-term memory* (GRU) cell. Similarly a GRU cell utilizes gates, namely an update gate $z_t$ and a reset gate $r_t$ to avoid vanishing gradients and enable the cell to keep information in the hidden state $h_t$ over an arbitrary amount of time. 
+To set up a recurrent network we used *gated recurrent units* (GRU). These recurrent cells can be seen as a variation of the *Long short-term memory* (GRU) cell. Similarly, a GRU cell utilizes gates, namely an update gate $z_t$ and a reset gate $r_t$ to avoid vanishing gradients and enable the cell to keep information in the hidden state $h_t$ over an arbitrary amount of time. 
 
 $$
 \begin{aligned}
@@ -265,7 +262,7 @@ r_t = \sigma(w_r x_t + u_r h_{t-1} + b_r)
 \end{aligned}
 $$
 
-with $w$ depicting weight matrices for the input $x_t$, $u$ the weight matrices for the previous hidden state $h_{t-1}$, $b$ the bias and $\sigma$ the sigmoid function. But in contrast to the GRU it uses only one hidden state $h_t$ instead of an additional cell state. The calculation of the hidden state/output of the cell integrates the previously computed gates.
+with $w$ depicting weight matrices for the input $x_t$, $u$ the weight matrices for the previous hidden state $h_{t-1}$, $b$ the bias and $\sigma$ the sigmoid function. But in contrast to the GRU, it uses only one hidden state $h_t$ instead of an additional cell state. The calculation of the hidden state/output of the cell integrates the previously computed gates.
 
 $$
 \begin{aligned}
@@ -284,11 +281,11 @@ In the implementation of a recurrent neural network for the policy we faced some
 
 ![*Figure 20: GRU Cell: executing a parallel step on the environemts*](report_screenshots/coordinator.py_step_parallel_gru.png)
 
-The hidden states returned by the actor (**Figure 4**) are saved between steps of the agent on the environment and between updates. During the update, the shape of the batch is three dimensional. The first dimension represents the agents, the second dimension the timesteps and the last the state vector (**Figure 21**). We found no solution to reset the hidden states of terminal timesteps during the forward pass of multiple timesteps at once without implementing a custom GRU. The recurrent policy returns mu and sigma of the action distribution in the same manner as the feed forward policy.
+The hidden states returned by the actor (**Figure 4**) are saved between steps of the agent on the environment and between updates. During the update, the shape of the batch is three dimensional. The first dimension represents the agents, the second dimension the timesteps and the last the state vector (**Figure 21**). We found no solution to reset the hidden states of terminal timesteps during the forward pass of multiple timesteps at once without implementing a custom GRU. The recurrent policy returns mu and sigma of the action distribution in the same manner as the feed-forward policy.
 
 ![*Figure 21: GRU Cell: getting the action distribution*](report_screenshots/coordinator.py_get_action_dist_gru.png)
 
-We provide the mask together with the input for the recurrent cell and change its shape corresponding to the shape of the hidden state of the cell defined by the amount of units  (**Figure 22, Line 73 - 77**). After that, we compute the values of the gates and the current hidden state $h_t$. Then the mask gets forwarded together with the hidden state to the next cell. The hidden state for the next timestep in one batch gets forwarded without the mask because it is provided by the input (**Figure 22, Line 79 - 88**).
+We provide the mask together with the input for the recurrent cell and change its shape corresponding to the shape of the hidden state of the cell defined by the number of units  (**Figure 22, Line 73 - 77**). After that, we compute the values of the gates and the current hidden state $h_t$. Then the mask gets forwarded together with the hidden state to the next cell. The hidden state for the next timestep in one batch gets forwarded without the mask because it is provided by the input (**Figure 22, Line 79 - 88**).
 
 
 ![*Figure 22: GRU Cell implementation: forward pass*](report_screenshots/gru.py_call.png)
@@ -308,13 +305,13 @@ On the leaderboards for the OpenAI Gym environments, LunarLanderContinuous-v2 is
 
 Now we will take a closer look at the performance of the MLP policy during a successful training run.
 
-In **Figure 23** the cumulative return of one agent is plotted against the number of steps taken in parallel after each episode. In the beginning of the training run the variability and the number of datapoints is quite high. This higher data point density happens because the agent crashes the Lunar Lander after a small number of timesteps, whereas later on, when performance has improved, the Lunar Lander will more slowly descend to the surface of the moon, resulting in fewer data points per timesteps. With even greater performance, the agent learns to balance the tradeoff between safe landing and fuel consumption, which results in a negative reward. Thus, the agent tries to land safely with as little fuel as possible, resulting again in a quicker descent and therefore increasing the number of datapoints per steps again. Between 200 and 300 the mean cumulative return converges, after about 120,000 timesteps it stops increasing notably and at roughly 200,000 steps the policy starts to overfit. The overfitting after 200,000 timesteps causes the average cumulative return across 100 trials to be 209, which is 31 points lower than our model after 120,000 steps. 
+In **Figure 23** the cumulative return of one agent is plotted against the number of steps taken in parallel after each episode. At the beginning of the training run the variability and the number of datapoints is quite high. This higher data point density happens because the agent crashes the Lunar Lander after a small number of timesteps, whereas later on, when performance has improved, the Lunar Lander will more slowly descend to the surface of the moon, resulting in fewer data points per timesteps. With even greater performance, the agent learns to balance the tradeoff between safe landing and fuel consumption, which results in a negative reward. Thus, the agent tries to land safely with as little fuel as possible, resulting again in a quicker descent and therefore increasing the number of datapoints per step again. Between 200 and 300 the mean cumulative return converges, after about 120,000 timesteps it stops increasing notably and at roughly 200,000 steps the policy starts to overfit. The overfitting after 200,000 timesteps causes the average cumulative return across 100 trials to be 209, which is 31 points lower than our model after 120,000 steps. 
 In this case taking a model from an earlier checkpoint (i.e. early stopping) has improved performance.
 
 
    ![*Figure 23: mlp cumulative return*](report_screenshots/results/cumulative_return_png.png)  
    
-The actor loss (**Figure 24, 25**) given by $\mathbb{E}_{\pi}[A_{w}^{\pi} \ln{\pi_{\theta}(a|s)}]$ oscillates around 0. While the log probability $\ln{\pi_{\theta}(a|s)}$ can only take negative values, the advantage  $A_{w}^{\pi} =  G_t - V^w_t$ can also be positive. The mean of the advantage is similarly around zero, due to the critic being incentivised to bring the advantage, i.e. difference between cumulative return and the critic’s estimate for this return close to zero. 
+The actor loss (**Figure 24, 25**) given by $\mathbb{E}_{\pi}[A_{w}^{\pi} \ln{\pi_{\theta}(a|s)}]$ oscillates around 0. While the log probability $\ln{\pi_{\theta}(a|s)}$ can only take negative values, the advantage  $A_{w}^{\pi} =  G_t - V^w_t$ can also be positive. The mean of the advantage is similarly around zero, due to the critic being incentivized to bring the advantage, i.e. difference between cumulative return and the critic’s estimate for this return close to zero. 
 The log probability converges to zero because the actor tries to take actions with maximal probability, i.e. $\ln({\pi_{\theta}(a|s) = 1})=0$.
 
    ![*Figure 24: mlp policy loss (main engine)*](report_screenshots/results/policy_main_mlp.png)  
@@ -323,7 +320,7 @@ The log probability converges to zero because the actor tries to take actions wi
 
 
 
-Similarly, the critic loss (**Figure 26**) converges to zero as per usual when using Mean Squared Error as the loss function. Of interest here is that the return estimate depends on the policy. That is why the variability of the loss is that high, since the policy steadily changes so to does the value that the critic tries to estimate. So it is only possible for the critic loss to converge near zero when the policy converges and the actions performed in each state are similar.
+Similarly, the critic loss (**Figure 26**) converges to zero as per usual when using Mean Squared Error as the loss function. Of interest here is that the return estimate depends on the policy. That is why the variability of the loss is that high since the policy steadily changes so does the value that the critic tries to estimate. So it is only possible for the critic loss to converge near zero when the policy converges and the actions performed in each state are similar.
 
    ![*Figure 26: mlp critic loss*](report_screenshots/results/critic_loss_mlp.png)
    
