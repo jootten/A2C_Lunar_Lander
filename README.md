@@ -20,5 +20,10 @@ A2C for continuous action spaces applied on the [LunarLanderContinuous][LLC] env
 
 <a href="https://youtu.be/ok_LtkVtMFo">View MLP Training Video</a>.
 
+**OpenAI Gym Leaderboard**:
+
+<a href="https://github.com/openai/gym/wiki/Leaderboard#lunarlandercontinuous-v2
+">View Leaderboard</a>.
+
 
 [LLC]: https://gym.openai.com/envs/LunarLanderContinuous-v2/
