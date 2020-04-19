@@ -292,7 +292,8 @@ We provide the mask together with the input for the recurrent cell and change it
 ### 5. How to run training and testing 
 Having read our implementation, we hope you are now eager to try it out!  
 We have included our trained models, which were saved using the `tf.train.Checkpoint` function. These can be tested by calling `python3 main.py --test`, which will automatically load the trained models and render the environment. We have also added further arguments to the command line parser, which can be viewed using `python3 main.py --help`. Most notably the policy network type can be changed here (`--network_type "mlp"` or `--network_type "gru"`). The number of agents for training can be changed as well, e.g. `--num_agents 12`. To train the model, use `--train`.
- 
+Note that this will create new checkpoints throughout the training, meaning that when running `--test` afterwards it will load the new checkpoints and not our trained model anymore.
+
 ### 6. Results and discussion
 
 * mlp
