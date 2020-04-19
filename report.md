@@ -31,9 +31,8 @@ Paul Jänsch
 4. The model and the experiment  
  4.1 An alternative actor: Recurrent policy network
 5. How to run training and testing
-6. Results
-7. Conclusion
-8. References
+6. Results and discussion
+7. References
 
 ### 1. Introduction/Motivation
 
@@ -220,7 +219,9 @@ Back in the coordinator, concatenating all the made observations accross all age
 
 ![*Figure 14: memory.py compute_discounted_cum_return*](report_screenshots/memory.py_compute_return.png)
 
-The memory object of the coordinator now contains the collective memory of all agents and their discounted returns. These are needed to compute the actor loss and critic loss, which we want to minimize, so we compute their gradients. This is coordinated by the `_get_mean_gradients()` function **(Figure 13, Line 80, Figure 15)**. Since we have two networks, two gradients are computed: The policy gradients minimize the actor loss, therefore maximizing the estimated return **(Figure 15, Line 161)** and the critic gradients minimize the critic loss, which will minimize the Mean Squared Error for the state value function **(Figure 15, Line 163)**. 
+The memory object of the coordinator now contains the collective memory of all agents and their discounted returns. These are needed to compute the actor loss and critic loss, which we want to minimize, so we compute their gradients. This is coordinated by the `_get_mean_gradients()` function **(Figure 13, Line 80, Figure 15)**. Since we have two networks, two gradients are computed: The policy gradients maximize the actor loss, therefore maximizing the estimated return **(Figure 15, Line 161)**. This might be unconventional, since the name "loss" suggests that it should be minimized, but since it is the derivative of the reward function, we want to maximize it. Since the term contains a log probability it will in fact converge to 0, since the log of probability values (which are between 0 and 1) is always $\leq 0$. In addition, the advantage term ($A_t^w = G_t -V_t^w$) should also converge to 0 since the estimated return $G_t$ is approximated by our critic (state value function) and we want our critic's estimate to be as close as possible to the actual return.
+
+The critic gradients minimize the critic loss, which will minimize the Mean Squared Error for the state value function **(Figure 15, Line 163)**. 
 
 ![*Figure 15: coordinator.py get_mean_gradients*](report_screenshots/coordinator.py_get_gradients.png)  
 
@@ -292,12 +293,17 @@ We provide the mask together with the input for the recurrent cell and change it
 Having read our implementation, we hope you are now eager to try it out!  
 We have included our trained models, which were saved using the `tf.train.Checkpoint` function. These can be tested by calling `python3 main.py --test`, which will automatically load the trained models and render the environment. We have also added further arguments to the command line parser, which can be viewed using `python3 main.py --help`. Most notably the policy network type can be changed here (`--network_type "mlp"` or `--network_type "gru"`). The number of agents for training can be changed as well, e.g. `--num_agents 12`. To train the model, use `--train`.
  
-### 6. Results
+### 6. Results and discussion
 
-### 7. Conclusion
+* mlp
+   * solved environment: show cumulative return
+   * actor/critic loss: critic dependent on policy so curves look similar, goes against zero, but osszilates around 0
+* gru
+   * solved: cum_return
+   * compare to mlp: more stable, learns faster, lower variance
 
-### 8. References
-...
+### 7. References
+
 
 [LLC]: https://gym.openai.com/envs/LunarLanderContinuous-v2/
 [CP]: https://gym.openai.com/envs/CartPole-v1/
