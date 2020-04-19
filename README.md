@@ -14,7 +14,7 @@ A2C for continuous action spaces applied on the [LunarLanderContinuous][LLC] env
 
 **Report**:
 
-<a href="report.html">View Report</a>.
+<a href="https://htmlpreview.github.io/?https://github.com/jootten/A2C_Lunar_Lander/blob/master/report.html">View Report</a>.
 
 **Video**:
 
