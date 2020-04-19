@@ -14,11 +14,7 @@ A2C for continuous action spaces applied on the [LunarLanderContinuous][LLC] env
 
 **Report**:
 
-<object data="report.pdf" type="application/pdf" width="700px" height="700px">
-    <embed src="report.pdf">
-        <p><a href="report.pdf">View PDF</a>.</p>
-    </embed>
-</object>
+<a href="report.html">View Report</a>.
 
 **Video**:
 
