@@ -82,9 +82,10 @@ $$
 These gradients are used to update the parameters of the value function and the policy. After that all actors start with the same parameters. This algorithm is a variation of the original asynchronous actor-critic method ([A3C][A3C]), where each actor and critic updates the global parameters independently, which leads to actors and critics with different parameters.
 
 Sources used:  
- * [the A3C paper][A3C]  
- * [Lilian Weng's blogpost about Policy Gradient Algorithms][Lil'Log]  
- * [A2C Code provided by OpenAI][A2Code]  
+ * the book *Reinforcment Learning: An Introduction* [^1]
+ * [the A3C paper][A3C][^2]
+ * [Lilian Weng's blogpost about Policy Gradient Algorithms][Lil'Log][^3]
+ * [A2C Code provided by OpenAI][A2Code]
 
 ### 3. Project development log
 
@@ -273,7 +274,7 @@ h_t &= z_t \odot h'_t + (1-z_t) \odot h_{t-1}
 \end{aligned}
 $$
 
-The complete operations happening in one GRU cell are depicted in **Figure 18** and the notations in **Figure 19**. For a more detailed review of the GRU view the work by [Chung et al. [2014]][GRU].
+The complete operations happening in one GRU cell are depicted in **Figure 18** and the notations in **Figure 19**. For a more detailed review of the GRU view the work by [Chung et al. [2014]][^4].
 
 ![*Figure 18: GRU Cell*](report_screenshots/gru_cell.png)
 
@@ -307,7 +308,9 @@ On the leaderboards for the OpenAI Gym environments, LunarLanderContinuous-v2 is
 
 Now we will take a closer look at the performance of the MLP policy during a successful training run.
 
-In **Figure 23** the cumulative return of one agent is plotted against the number of steps taken in parallel after each episode. In the beginning of the training run the variability and the number of datapoints is quite high. This higher data point density happens because the agent crashes the Lunar Lander after a small number of timesteps, whereas later on, when performance has improved, the Lunar Lander will more slowly descend to the surface of the moon, resulting in fewer data points per timesteps. With even greater performance, the agent learns to balance the tradeoff between safe landing and fuel consumption, which results in a negative reward. Thus, the agent tries to land safely with as little fuel as possible, resulting again in a quicker descent and therefore increasing the number of datapoints per steps again. Between 200 and 300 the mean cumulative return converges, after about 120,000 timesteps it stops increasing notably and at roughly 200,000 steps the policy starts to overfit.
+In **Figure 23** the cumulative return of one agent is plotted against the number of steps taken in parallel after each episode. In the beginning of the training run the variability and the number of datapoints is quite high. This higher data point density happens because the agent crashes the Lunar Lander after a small number of timesteps, whereas later on, when performance has improved, the Lunar Lander will more slowly descend to the surface of the moon, resulting in fewer data points per timesteps. With even greater performance, the agent learns to balance the tradeoff between safe landing and fuel consumption, which results in a negative reward. Thus, the agent tries to land safely with as little fuel as possible, resulting again in a quicker descent and therefore increasing the number of datapoints per steps again. Between 200 and 300 the mean cumulative return converges, after about 120,000 timesteps it stops increasing notably and at roughly 200,000 steps the policy starts to overfit. The overfitting after 200,000 timesteps causes the average cumulative return across 100 trials to be 209, which is 31 points lower than our model after 120,000 steps. 
+In this case taking a model from an earlier checkpoint (i.e. early stopping) has improved performance.
+
 
    ![*Figure 23: mlp cumulative return*](report_screenshots/results/cumulative_return_png.png)  
    
@@ -338,8 +341,21 @@ Similarly, the critic loss (**Figure 26**) converges to zero as per usual when u
    ![*Figure 28: gru critic loss*](report_screenshots/results/critic_loss_gru.png)
 
 
+### 7. Discussion
 
-### 7. References
+This section will cover our discussion of the project as a whole.
+Looking back, we are proud to have trained a model using Reinforcement Learning and implemented the A2C algorithm with efficient parallelization. We could test our understanding of a RL-paper and even improve upon the algorithm using our GRU implementation. Working as a team and collaborating with git has been fun and effective.  
+For future projects we would put a greater emphasis on storing summary statistics of training runs more meaningfully to have a backlog of how our model evolves over time. In addition, the implementation could still be improved and extended upon, e.g. by including experience replay to increase sample efficiency [^5]. Also integrating trust region policy optimization from the TRPO algorithm might improve training stability by not increasing the policy parameters by too much in a single step [^6]. Furthermore the GRU network could be replaced by an attention model, e.g. a transformer. Attention networks replace recurrent networks in many fields, since they maintain utilization of information other than the current, by directing their “attention” on particular sets of the data. This enables better parallelization because the data/timesteps must not be forwarded sequentially [^7].
+
+### 8. References
+[^1]: Sutton, R. S., & Barto, A. G. (2018). Reinforcement learning: An introduction.
+[^2]: Mnih, V., Badia, A. P., Mirza, M., Graves, A., Lillicrap, T., Harley, T., ... & Kavukcuoglu, K. (2016, June). Asynchronous methods for deep reinforcement learning. In International conference on machine learning (pp. 1928-1937).
+[^3]: Weng, Lilian. "Policy Gradient Algorithms". In lilianweng.github.io/lil-log. "https://lilianweng.github.io/lil-log/2018/04/08/policy-gradient-algorithms.html" (2018).
+[^4]: Chung, J., Gulcehre, C., Cho, K., & Bengio, Y. (2014). Empirical evaluation of gated recurrent neural networks on sequence modeling. arXiv preprint arXiv:1412.3555.
+[^5]: Schulman, J., Levine, S., Abbeel, P., Jordan, M., & Moritz, P. (2015, June). Trust region policy optimization. In International conference on machine learning (pp. 1889-1897).  
+[^6]: Wang, Z., Bapst, V., Heess, N., Mnih, V., Munos, R., Kavukcuoglu, K., & de Freitas, N. (2016). Sample efficient actor-critic with experience replay. arXiv preprint arXiv:1611.01224.  
+   
+[^7]: Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., ... & Polosukhin, I. (2017). Attention is all you need. In Advances in neural information processing systems (pp. 5998-6008).
 
 
 [LLC]: https://gym.openai.com/envs/LunarLanderContinuous-v2/
@@ -352,4 +368,3 @@ Similarly, the critic loss (**Figure 26**) converges to zero as per usual when u
 [LeonLect]: https://studip.uni-osnabrueck.de/sendfile.php?type=0&file_id=f0d5efee6a2faf80610f2540611efb47&file_name=IANNwTF_L12_Reinforcement_Learning.pdf
 [PFP]: http://incompleteideas.net/book/bookdraft2017nov5.pdf 
 [BiWalk]: http://gym.openai.com/envs/BipedalWalker-v2/
-[GRU]: https://towardsdatascience.com/understanding-gru-networks-2ef37df6c9be

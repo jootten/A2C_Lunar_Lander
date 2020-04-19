@@ -82,7 +82,7 @@ class GRUCell(tf.keras.layers.Layer):
         
         # Compute current hidden state (memory content)
         h_t = tf.nn.tanh(tf.matmul(input, self.w_h) + tf.matmul((r_t * h_masked), self.u_h) + self.b_h)
-        h_t_seq = (z_t * h_t) + ((1 - z_t) * h_masked)
+        h_t = (z_t * h_t) + ((1 - z_t) * h_masked)
 
-        h_t_forward = tf.concat((h_t_seq, mask), axis=1)
-        return h_t_forward, [h_t_seq]
+        h_t_forward = tf.concat((h_t, mask), axis=1)
+        return h_t_forward, [h_t]

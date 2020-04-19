@@ -14,13 +14,6 @@ from memory import Memory
 from actor import Actor
 from critic import Critic
 
-# enables cuda implementations for recurrent networks
-physical_devices = tf.config.list_physical_devices('GPU')
-tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
-
-
-os.system("rm -rf ./logs/")
-
 ENTROPY_COEF = 0.01 # used to balance exploration
 
 class Coordinator:
