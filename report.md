@@ -322,7 +322,7 @@ The log probability converges to zero because the actor tries to take actions wi
 
    ![*Figure 24: mlp policy loss (main engine)*](report_screenshots/results/policy_main_mlp.png)  
      
-   ![*Figure 25: mlp policy loss (side engine)*](report_screenshots/results/policy_side_mlp.png)
+   ![*Figure 25: mlp policy loss (side engines)*](report_screenshots/results/policy_side_mlp.png)
 
 
 
@@ -333,15 +333,20 @@ Similarly, the critic loss (**Figure 26**) converges to zero as per usual when u
 
 ### 6.2 GRU
 
-   * solved: cum_return
+In this section we will quickly highlight the performance of the GRU policy during training.
+
+We were able to solve the environment with the GRU policy and even faster than with the MLP policy. Nevertheless, with our current configuration training is not stable. The performance of the agent decreases quickly after it starts converging and the cumulative return (**Figure 26**) drops far below zero. 
    
-   ![*Figure 26: gru cumulative return*](report_screenshots/results/cumulative_return_gru.png)
+   ![*Figure 26: gru cumulative return*](report_screenshots/results/cumulative_return_gru.png)  
    
-   * compare to mlp: more stable, learns faster, lower variance
+The reason why the policy collapses might be that it changes fast and in large steps. Since the critic depends on the policy (return) and vice versa (advantage), too large steps might lead to a downward spiral in which the perfomance decreases rapidly because actor (**Figure 27, 28**) and critic (**Figure 29**) are not able to adapt fast and correct. The policy loss even takes NaN as value at the end because it is dropping to values below the computationally possible.
    
-   ![*Figure 27: gru policy loss*](report_screenshots/results/policy_main_gru.png)  
+   ![*Figure 27: gru policy loss (main  engine)*](report_screenshots/results/policy_main_gru.png)  
    
-   ![*Figure 28: gru critic loss*](report_screenshots/results/critic_loss_gru.png)
+   ![*Figure 28: gru policy loss (side  engines)*](report_screenshots/results/policy_main_gru.png)  
+
+
+   ![*Figure 29: gru critic loss*](report_screenshots/results/critic_loss_gru.png)  
 
 
 ### 7. Discussion

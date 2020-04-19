@@ -16,14 +16,20 @@ from critic import Critic
 
 ENTROPY_COEF = 0.01 # used to balance exploration
 
+
+
+
+
 class Coordinator:
     def __init__(self, num_agents=8, env_name='LunarLanderContinuous-v2', network='mlp', num_steps=32):
         # set up environment, observation memory 
         self.num_agents = num_agents
         self.num_steps=num_steps
         self.network = network
+        
         temp_env = gym.make(env_name)
         self.obs_space_size = temp_env.observation_space.shape[0]
+        
         self.memory = None
         
         # Initialize model, loss and optimizer
